@@ -1,8 +1,7 @@
 from dash import Dash, html, dcc, Input, Output, callback, State, dash_table
 import base64
 import pandas as pd
-from application.custom_functions import decode_dash_upload
-from application.mt4data import MtData
+from application.mt4data import TxtParser
 
 app = Dash(__name__)
 
@@ -30,12 +29,12 @@ app.layout = html.Div([dcc.Upload(
 def parse_contents(contents, filename, date):
 
     content_type, content_string = contents.split(',')
-    print(content_type)
-    file_text = decode_dash_upload(content_string)
 
     try:
         if 'txt' in filename:
-            data = MtData(file_text)
+            statement = TxtParser.from_dash_upload(content_string)
+            statement.get_account_info()
+            statement.get_operations_info()
 
     except Exception as e:
         print(e)
