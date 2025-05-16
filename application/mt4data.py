@@ -1,17 +1,38 @@
+import datetime
 from application.constants import *
+from application.config import get_logger
 from bs4 import BeautifulSoup
-import datetime as dt
+from dataclasses import dataclass
+from datetime import datetime
 import tradermade as tm
 import requests
 import pandas as pd
 import logging
 import base64
 import re
-logging.basicConfig(level=logging.INFO)
+
+logger = get_logger(__name__)
+@dataclass
+class Trade:
+    order: int
+    open_time: datetime
+    type: str
+    volume: float
+    symbol: str
+    open_price: float
+    sl: float
+    tp: float
+    close_time: datetime
+    close_price: float
+    commission: float
+    taxes: float
+    swap: float
+    profit: float
+    high: float = 0
+    low: float = 0
 
 
 class TxtParser:
-
     _ABOVE_TRADES_REF_LINE = '   <td>Price</td><td>Commission</td><td>Taxes</td><td>Swap</td><td>Profit</td></tr>'
     _ABOVE_ACCT_REF_LINE = '<tr align=left>'
 
@@ -19,10 +40,11 @@ class TxtParser:
         """txt is the raw html string of the mt4 statement"""
 
         self._raw_html = txt
-        self.my_html_list = self.create_html_list(self.raw_html)
+        self.my_html_list = self._create_html_list(self.raw_html)
+        logger.info(f'TxtParser creation')
 
     def get_operations_info(self) -> list[list[str]]:
-        operations_raw = self.extract_section_from_html_list(
+        operations_raw = self._extract_section_from_html_list(
             my_list=self.my_html_list,
             start=self._ABOVE_TRADES_REF_LINE,
         )
@@ -30,11 +52,10 @@ class TxtParser:
         for line in operations_raw:
             td_content = self.parse_td(line)
             operations_info.append(td_content)
-        logging.info(operations_info)
         return operations_info
 
     def get_account_info(self) -> dict:
-        acct_info_raw = self.extract_section_from_html_list(
+        acct_info_raw = self._extract_section_from_html_list(
             my_list=self.my_html_list,
             start=self._ABOVE_ACCT_REF_LINE,
         )
@@ -47,7 +68,6 @@ class TxtParser:
                 acct_info[values[0]] = values[1]
             except IndexError:
                 pass
-        logging.info(acct_info)
         return acct_info
 
     @classmethod
@@ -68,12 +88,12 @@ class TxtParser:
         return cls(html_text)
 
     @staticmethod
-    def create_html_list(my_txt_string: str) -> list:
+    def _create_html_list(my_txt_string: str) -> list:
         """returns a list of strings with each line being a line from my_txt_string"""
         return my_txt_string.split('\n')
 
     @staticmethod
-    def extract_section_from_html_list(my_list: list, start: str) -> list:
+    def _extract_section_from_html_list(my_list: list, start: str) -> list:
         """slices txt from a line reference (string) to the next empty line, empty and start
          line not included in returned list"""
 
@@ -87,12 +107,12 @@ class TxtParser:
             end_idx = sliced_list.index('')
         except ValueError:
             raise ValueError("Could not find an empty line after the start reference.")
-        section = sliced_list[1: end_idx]
+        section = sliced_list[: end_idx]
         logging.info(f'Sliced result from index {start_idx} to {end_idx}: {section}')
         return section
 
     @staticmethod
-    def parse_td(td: str) -> list:
+    def parse_td(td: str) -> list[str]:
         """Parses an HTML string containing <td> tags and returns a list of their inner text values"""
         all_td_content = [td.text for td in BeautifulSoup(td, 'html.parser')('td')]
         return all_td_content
@@ -102,28 +122,74 @@ class TxtParser:
         return self._raw_html
 
 
+class TradeData:
+    def __init__(self, trades_info: list[list[str]]):
+        self.raw_operations = trades_info
+        self._trades = list()
+        self._balances = list()
+
+        self._split_operations()
+        self._create_trade_objects()
+
+        logging.info(f'trades info {self.trades} balance info {self.balances} and trade objects {self.trade_objects}')
+
+    def _create_trade_objects(self):
+        """Creates self.trade_objects attribute. This attribute represents a list of Trade objects
+        from the list of trades contained in the trades_info instantiation argument"""
+
+        self.trade_objects = [self._parse_trade(r) for r in self.trades]
+
+    def _split_operations(self):
+        """separates balance and trading info from trades_info. trades are stored in self._trades
+        and balances are stored in self._balances"""
+
+        for row in self.raw_operations:
+            if self._is_trade(row):
+                self._trades.append(row)
+
+            elif self._is_balance(row):
+                self._balances.append(row)
+
+    @staticmethod
+    def _is_trade(row):
+        """returns True if a list contains a trade's information"""
+
+        return row[2].lower() in {'buy', 'sell'} if len(row) > 2 else False
+
+    @staticmethod
+    def _is_balance(row):
+        """returns True if a list contains a balance's information"""
+
+        return row[2].lower() == 'balance' if len(row) > 2 else False
+
+    @staticmethod
+    def _parse_trade(row) -> Trade:
+        return Trade(
+            order=int(row[0]),
+            open_time=datetime.strptime(row[1], "%Y.%m.%d %H:%M:%S"),
+            type=row[2],
+            volume=float(row[3]),
+            symbol=row[4].upper(),
+            open_price=float(row[5]),
+            sl=float(row[6]),
+            tp=float(row[7]),
+            close_time=datetime.strptime(row[8], "%Y.%m.%d %H:%M:%S"),
+            close_price=float(row[9]),
+            commission=float(row[10]),
+            taxes=float(row[11]),
+            swap=float(row[12]),
+            profit=float(row[13]),
+        )
+
+    @property
+    def trades(self):
+        return self._trades
+
+    @property
+    def balances(self):
+        return self._balances
 
 
-def patched_timeseries(currency, start, end, fields=None, interval='daily', period=15):
-    url = "https://marketdata.tradermade.com/api/v1/timeseries"
-    params = {
-        "currency": currency,
-        "api_key": TM_API_KEY,
-        "start_date": start,
-        "end_date": end,
-        "interval": interval,
-        "period": period,
-        "format": "split"
-    }
-    response = requests.get(url, params=params)
-
-    data = response.json()
-    if "quotes" not in data:
-        return data  # likely an error message
-    df = pd.DataFrame(data["quotes"]["data"], columns=data["quotes"]["columns"])
-    if fields:
-        return df[["date"] + fields]
-    return df
 
 
 
@@ -307,5 +373,30 @@ def patched_timeseries(currency, start, end, fields=None, interval='daily', peri
 #
 #
 #         return data
-
-
+# def patched_timeseries(currency, start, end, fields=None, interval='daily', period=15):
+#     url = "https://marketdata.tradermade.com/api/v1/timeseries"
+#     params = {
+#         "currency": currency,
+#         "api_key": TM_API_KEY,
+#         "start_date": start,
+#         "end_date": end,
+#         "interval": interval,
+#         "period": period,
+#         "format": "split"
+#     }
+#     response = requests.get(url, params=params)
+#
+#     data = response.json()
+#     if "quotes" not in data:
+#         return data  # likely an error message
+#     df = pd.DataFrame(data["quotes"]["data"], columns=data["quotes"]["columns"])
+#     if fields:
+#         return df[["date"] + fields]
+#     return df
+#
+#
+#
+aux = TxtParser.from_filepath('statement.txt')
+operations_infonow = aux.get_operations_info()
+now = TradeData(operations_infonow)
+logger.info(f'TradeData.trades {now.trade_objects}')
