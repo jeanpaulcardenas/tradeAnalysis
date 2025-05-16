@@ -7,11 +7,12 @@ from datetime import datetime
 import tradermade as tm
 import requests
 import pandas as pd
-import logging
 import base64
 import re
 
 logger = get_logger(__name__)
+
+
 @dataclass
 class Trade:
     order: int
@@ -30,6 +31,14 @@ class Trade:
     profit: float
     high: float = 0
     low: float = 0
+
+
+@dataclass
+class Balance:
+    order: int
+    date: datetime
+    amount: float
+    type: str = ''
 
 
 class TxtParser:
@@ -108,7 +117,7 @@ class TxtParser:
         except ValueError:
             raise ValueError("Could not find an empty line after the start reference.")
         section = sliced_list[: end_idx]
-        logging.info(f'Sliced result from index {start_idx} to {end_idx}: {section}')
+        logger.info(f'Sliced result from index {start_idx} to {end_idx}: {section}')
         return section
 
     @staticmethod
@@ -123,21 +132,35 @@ class TxtParser:
 
 
 class TradeData:
+    _HTML_DATE_SOURCE_FORMAT = "%Y.%m.%d %H:%M:%S"
+
     def __init__(self, trades_info: list[list[str]]):
         self.raw_operations = trades_info
-        self._trades = list()
-        self._balances = list()
+        self._trades_raw = []
+        self._balances_raw = []
 
         self._split_operations()
         self._create_trade_objects()
+        self._create_balance_objects()
+        self._insert_balance_type()
 
-        logging.info(f'trades info {self.trades} balance info {self.balances} and trade objects {self.trade_objects}')
+        logger.info(f' {__name__}trades info {self.trades} balance info {self.balances}')
+
+    def _create_balance_objects(self):
+        """Creates a list of Balance objects using a parser functionality"""
+
+        self._balance_objects = [
+            obj for r in self._balances_raw
+            if (obj := self._parse_balance(r, self._HTML_DATE_SOURCE_FORMAT))
+        ]
 
     def _create_trade_objects(self):
-        """Creates self.trade_objects attribute. This attribute represents a list of Trade objects
-        from the list of trades contained in the trades_info instantiation argument"""
+        """Creates a list of Trade objects using a parser functionality"""
 
-        self.trade_objects = [self._parse_trade(r) for r in self.trades]
+        self._trade_objects = [
+            obj for r in self._trades_raw
+            if (obj := self._parse_trade(r, self._HTML_DATE_SOURCE_FORMAT))
+        ]
 
     def _split_operations(self):
         """separates balance and trading info from trades_info. trades are stored in self._trades
@@ -145,10 +168,60 @@ class TradeData:
 
         for row in self.raw_operations:
             if self._is_trade(row):
-                self._trades.append(row)
+                self._trades_raw.append(row)
 
             elif self._is_balance(row):
-                self._balances.append(row)
+                self._balances_raw.append(row)
+
+    def _insert_balance_type(self):
+        """assigns the 'withdrawal' or 'balance' to objects in 'self.balances.type'"""
+        for item in self.balances:
+            item.type = self._get_balance_type(item.amount)
+
+    def _parse_balance(self, row: list, date_format: str) -> Balance | None:
+        """Returns Balance object from a row in MT4 format. Returns None if the row is malformed"""
+        try:
+            if len(row) > 4:
+                return Balance(
+                    order=int(row[0]),
+                    date=datetime.strptime(row[1], date_format),
+                    amount=self._balance_to_float(row[4])
+                )
+            else:
+                logger.warning(f"Skipping malformed trade row (too few columns): {row}")
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to parse trade row: {row} | Error: {e}")
+            return None
+
+    @staticmethod
+    def _parse_trade(row: list, date_format: str) -> Trade | None:
+        """Returns a Trade object from a row in MT4 format. Returns None if the row is malformed."""
+
+        try:
+            if len(row) > 12:
+                return Trade(
+                    order=int(row[0]),
+                    open_time=datetime.strptime(row[1], date_format),
+                    type=row[2],
+                    volume=float(row[3]),
+                    symbol=row[4].upper(),
+                    open_price=float(row[5]),
+                    sl=float(row[6]),
+                    tp=float(row[7]),
+                    close_time=datetime.strptime(row[8], date_format),
+                    close_price=float(row[9]),
+                    commission=float(row[10]),
+                    taxes=float(row[11]),
+                    swap=float(row[12]),
+                    profit=float(row[13]),
+                )
+            else:
+                logger.warning(f"Skipping malformed trade row (too few columns): {row}")
+                return None
+        except Exception as e:
+            logger.warning(f"Failed to parse trade row: {row} | Error: {e}")
+            return None
 
     @staticmethod
     def _is_trade(row):
@@ -163,34 +236,32 @@ class TradeData:
         return row[2].lower() == 'balance' if len(row) > 2 else False
 
     @staticmethod
-    def _parse_trade(row) -> Trade:
-        return Trade(
-            order=int(row[0]),
-            open_time=datetime.strptime(row[1], "%Y.%m.%d %H:%M:%S"),
-            type=row[2],
-            volume=float(row[3]),
-            symbol=row[4].upper(),
-            open_price=float(row[5]),
-            sl=float(row[6]),
-            tp=float(row[7]),
-            close_time=datetime.strptime(row[8], "%Y.%m.%d %H:%M:%S"),
-            close_price=float(row[9]),
-            commission=float(row[10]),
-            taxes=float(row[11]),
-            swap=float(row[12]),
-            profit=float(row[13]),
-        )
+    def _get_balance_type(amount: float) -> str:
+        """return 'withdrawal' if amount < 0.
+        returns 'deposit' if amount => 0"""
+        if amount >= 0:
+            return 'deposit'
+
+        elif amount < 0:
+            return 'withdrawal'
+
+    @staticmethod
+    def _balance_to_float(balance_amount: str):
+        """returns a float from a str having blank spaces as separators.
+        e.g. '10 000.00' -> 10000.0'"""
+        no_spaces = balance_amount.replace(' ', '')
+        try:
+            return float(no_spaces)
+        except ValueError:
+            raise ValueError("Balance amount can't be converted to float")
 
     @property
     def trades(self):
-        return self._trades
+        return self._trade_objects
 
     @property
     def balances(self):
-        return self._balances
-
-
-
+        return self._balance_objects
 
 
 #
@@ -399,4 +470,4 @@ class TradeData:
 aux = TxtParser.from_filepath('statement.txt')
 operations_infonow = aux.get_operations_info()
 now = TradeData(operations_infonow)
-logger.info(f'TradeData.trades {now.trade_objects}')
+logger.info(f'TradeData.trades {now.trades} \n\nTradeData.balances {now.balances}')
