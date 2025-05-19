@@ -3,7 +3,7 @@ from application.constants import *
 from application.config import get_logger
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
-from datetime import datetime
+import datetime as dt
 import tradermade as tm
 import requests
 import pandas as pd
@@ -16,14 +16,14 @@ logger = get_logger(__name__)
 @dataclass
 class Trade:
     order: int
-    open_time: datetime
+    open_time: dt.datetime
     type: str
     volume: float
     symbol: str
     open_price: float
     sl: float
     tp: float
-    close_time: datetime
+    close_time: dt.datetime
     close_price: float
     commission: float
     taxes: float
@@ -31,6 +31,7 @@ class Trade:
     profit: float
     high: float = 0
     low: float = 0
+    time_opened: dt.timedelta = 0
 
 
 @dataclass
@@ -53,6 +54,8 @@ class TxtParser:
         logger.info(f'TxtParser creation')
 
     def get_operations_info(self) -> list[list[str]]:
+        """returns a list with the meaningful data of the trades and balances of the MT4 operations report"""
+
         operations_raw = self._extract_section_from_html_list(
             my_list=self.my_html_list,
             start=self._ABOVE_TRADES_REF_LINE,
@@ -64,6 +67,8 @@ class TxtParser:
         return operations_info
 
     def get_account_info(self) -> dict:
+        """returns number Account, Name, Currency and Leverage from MT4 report"""
+
         acct_info_raw = self._extract_section_from_html_list(
             my_list=self.my_html_list,
             start=self._ABOVE_ACCT_REF_LINE,
@@ -91,6 +96,7 @@ class TxtParser:
 
     @classmethod
     def from_filepath(cls, filepath: str):
+        """Instantiates a class object from a filepath to the MT4 report"""
         with open(filepath) as d:
             html_text = d.read()
 
@@ -99,6 +105,7 @@ class TxtParser:
     @staticmethod
     def _create_html_list(my_txt_string: str) -> list:
         """returns a list of strings with each line being a line from my_txt_string"""
+
         return my_txt_string.split('\n')
 
     @staticmethod
@@ -117,7 +124,6 @@ class TxtParser:
         except ValueError:
             raise ValueError("Could not find an empty line after the start reference.")
         section = sliced_list[: end_idx]
-        logger.info(f'Sliced result from index {start_idx} to {end_idx}: {section}')
         return section
 
     @staticmethod
@@ -143,8 +149,16 @@ class TradeData:
         self._create_trade_objects()
         self._create_balance_objects()
         self._insert_balance_type()
+        self._insert_time_opened()
 
-        logger.info(f' {__name__}trades info {self.trades} balance info {self.balances}')
+        logger.info(f' {__name__}trades info {self.trades[0]} balance info {len(self.balances)}')
+
+    def _insert_time_opened(self):
+        """Assigns dt.timedelta value for opening and closing times in Trade.time_opened"""
+
+        for item in self.trades:
+            time_opened = item.close_time - item.open_time
+            item.time_opened = time_opened
 
     def _create_balance_objects(self):
         """Creates a list of Balance objects using a parser functionality"""
@@ -184,7 +198,7 @@ class TradeData:
             if len(row) > 4:
                 return Balance(
                     order=int(row[0]),
-                    date=datetime.strptime(row[1], date_format),
+                    date=dt.datetime.strptime(row[1], date_format),
                     amount=self._balance_to_float(row[4])
                 )
             else:
@@ -202,14 +216,14 @@ class TradeData:
             if len(row) > 12:
                 return Trade(
                     order=int(row[0]),
-                    open_time=datetime.strptime(row[1], date_format),
+                    open_time=dt.datetime.strptime(row[1], date_format),
                     type=row[2],
                     volume=float(row[3]),
                     symbol=row[4].upper(),
                     open_price=float(row[5]),
                     sl=float(row[6]),
                     tp=float(row[7]),
-                    close_time=datetime.strptime(row[8], date_format),
+                    close_time=dt.datetime.strptime(row[8], date_format),
                     close_price=float(row[9]),
                     commission=float(row[10]),
                     taxes=float(row[11]),
@@ -264,210 +278,180 @@ class TradeData:
         return self._balance_objects
 
 
-#
-# class MtData:
-#     def __init__(self, file: list[str], sql_data_length):
-#         self.sql_data_length = sql_data_length
-#         self._text = file
-#         self._currency = self.get_currency()
-#         self.history = self.get_history()
-#         self.dict = self.get_trades_dict()
-#         self.trades_made = len(self.dict['act'])
-#         print(f'dict:\n{self.dict} \n\n {self.history} \n\n {self.get_balance_dict()}')
-#
-#     @property
-#     def text(self):
-#         return self._text
-#
-#     @staticmethod
-#     def get_pair_name(pair):
-#         """returns long-name pair from pair in the form of 6 letters characters e.g 'EURUSD'"""
-#         try:
-#             return f'{PAIRS[pair[:3]]} / {PAIRS[pair[3:]]}'
-#
-#         except KeyError:
-#             return pair
-#
-#     @staticmethod
-#     def tm_date_format(date: dt):
-#         """formats date-time type to tm API required format 'YYYY-mm-dd-HH:MM"""
-#         return date.strftime('%Y-%m-%d-%H:%M')
-#
-#     @staticmethod
-#     def set_rest_api_key(key):
-#         tm.set_rest_api_key(key)
-#
-#
-#     @staticmethod
-#     def parse_html_row(row):
-#         soup = BeautifulSoup(row, 'html.parser')
-#         td_text_list = [_.text for _ in soup.find_all('td')]
-#         return td_text_list
-#
-#     @staticmethod
-#     def is_trade(my_list):
-#         """gets """
-#
-#
-#     def get_currency_symbol(self):
-#         if self._currency in CURRENCIES:
-#             return CURRENCIES[self._currency]
-#
-#         else:
-#             return ""
-#
-#     def get_history(self):
-#         """Gets dictionary from statement.txt"""
-#
-#         data = get_raw_info()
-#         list_of_trades = list()
-#         list_of_balance = list()
-#         for row in data:
-#
-#             soup = BeautifulSoup(row, 'html.parser')
-#             td_text_list = [_.text for _ in soup.find_all('td')]
-#             base = td_text_list[4][:3].upper()
-#             cotizada = td_text_list[4][3:].upper()
-#
-#             if base in list(PAIRS.keys()) and cotizada in list(PAIRS.keys()):
-#                 list_of_trades.append(td_text_list)
-#
-#             elif td_text_list[2] == 'balance':
-#                 list_of_balance.append(td_text_list)
-#
-#         return {
-#             'trades': list_of_trades,
-#             'balances': list_of_balance
-#         }
-#
-#     def get_trades_dict(self):
-#
-#         list_of_trades = self.history['trades']
-#
-#         return {
-#             'act': [trade[4].upper() for trade in list_of_trades],
-#             'vol': [float(trade[3]) for trade in list_of_trades],
-#             'tip': [trade[2] for trade in list_of_trades],
-#             'fi': [dt.datetime.strptime(trade[1], '%Y.%m.%d %H:%M:%S') for trade in list_of_trades],
-#             'vi': [float(trade[5]) for trade in list_of_trades],
-#             'ff': [dt.datetime.strptime(trade[8], '%Y.%m.%d %H:%M:%S') for trade in list_of_trades],
-#             'vf': [float(trade[9]) for trade in list_of_trades],
-#             'sl': [float(trade[6]) for trade in list_of_trades],
-#             'tp': [float(trade[7]) for trade in list_of_trades],
-#             'ing': [float(trade[-1]) for trade in list_of_trades],
-#             'lnm': [self.get_pair_name(trade[4].upper()) for trade in list_of_trades],
-#             'com': [float(trade[10]) for trade in list_of_trades],
-#             'tax': [float(trade[11]) for trade in list_of_trades],
-#             'swp': [float(trade[12]) for trade in list_of_trades]
-#         }
-#
-#     def get_balance_dict(self):
-#         my_balances = self.history['balances']
-#         aux = {
-#             'ing': [float(balance[-1].replace(" ", "")) for balance in my_balances],
-#             'ff': [dt.datetime.strptime(balance[1], '%Y.%m.%d %H:%M:%S') for balance in my_balances],
-#         }
-#         aux['tip'] = ['DEPOSIT' if val >= 0 else 'WITHDRAWAL' for val in aux['ing']]
-#
-#         return aux
-#
-#     def get_api_data(self):
-#         """get highs and lows from each trade. returns a list of dataframes (one for each trade)"""
-#         self.set_rest_api_key(TM_API_KEY)
-#         data = []
-#         period = 1
-#         for t in range(self.sql_data_length, self.trades_made):
-#             start = self.dict['fi'][t]
-#             end = self.dict['ff'][t]
-#             print(start, type(start))
-#             now = dt.datetime.now()
-#             start_api = self.tm_date_format(start)
-#             end_api = self.tm_date_format(end)
-#
-#             if start + dt.timedelta(days=1) > end and start + dt.timedelta(days=30) > now:
-#                 interval = 'minute'
-#                 print('minute')
-#
-#                 if start + dt.timedelta(hours=6) > end:
-#                     period = 1
-#                 else:
-#                     period = 5
-#
-#             elif start + dt.timedelta(days=30) > end and start + dt.timedelta(days=360) > now:
-#
-#                 interval = 'hourly'
-#                 print('hour')
-#                 start_api = dt.datetime.strftime(start - dt.timedelta(hours=1), '%Y-%m-%d-%H:%M')
-#
-#                 if start + dt.timedelta(days=15) > end:
-#                     period = 1
-#                 else:
-#                     period = 2
-#
-#             else:
-#                 interval = "daily"
-#                 logging.info(f'start date{start_api}')
-#             print(self.dict['act'][t], start_api, end_api, interval, period)
-#             r = tm.timeseries(
-#                 currency='EURUSD',
-#                 start='2025-02-05-12:20',
-#                 end='2025-02-05-20:20',
-#                 interval='hourly',
-#                 period=1
-#             )
-#             print(r)
-#             r = patched_timeseries(self.dict['act'], start=start_api, end=end_api, interval='daily', period=15)
-#             print(r)
-#
-#             if r.empty:
-#                 print('empty')
-#
-#                 if start + dt.timedelta(minutes=1) > end:
-#                     interval = 'minute'
-#
-#                 elif start + dt.timedelta(hours=1) > end:
-#                     interval = 'hourly'
-#
-#                 else:
-#                     interval = 'daily'
-#
-#                 r = tm.historical(
-#                     currency=self.dict['act'][t].lower(),
-#                     date=end_api,
-#                     interval=interval,
-#                     fields=['high', 'low']
-#
-#                 )
-#
-#
-#             data.append(r)
-#
-#
-#         return data
-# def patched_timeseries(currency, start, end, fields=None, interval='daily', period=15):
-#     url = "https://marketdata.tradermade.com/api/v1/timeseries"
-#     params = {
-#         "currency": currency,
-#         "api_key": TM_API_KEY,
-#         "start_date": start,
-#         "end_date": end,
-#         "interval": interval,
-#         "period": period,
-#         "format": "split"
-#     }
-#     response = requests.get(url, params=params)
-#
-#     data = response.json()
-#     if "quotes" not in data:
-#         return data  # likely an error message
-#     df = pd.DataFrame(data["quotes"]["data"], columns=data["quotes"]["columns"])
-#     if fields:
-#         return df[["date"] + fields]
-#     return df
-#
-#
-#
+class TraderMadeClient:
+    _BASE_URL = 'https://marketdata.tradermade.com/api/v1/'
+    _TIMESERIES_ENDPOINT = 'timeseries'
+    _HISTORICAL_ENDPOINT = 'historical'
+    _HOUR_HISTORICAL_ENDPOINT = 'hour_historical'
+    _MINUTE_HISTORICAL_ENDPOINT = 'minute_historical'
+    _TM_DATE_FORMAT_MINUTE = '%Y-%m-%d-%H:%M'
+    _TM_DATE_FORMAT_DAILY = '%Y-%m-%d'
+    _OPTIONS_INTERVAL_TO_PERIOD = {'minute': 5, 'hourly': 1, 'daily': 1}
+    def __init__(self, tm_api_key):
+        self._API_KEI = tm_api_key
+        self._set_api_key()
+
+    def _build_historical_params(self, trade: Trade, time_unit: str):
+        """Create hour historical request parameters given:
+         fields: any of ['open', 'close', 'high', 'low'];
+         trade: a trade of type Trade;
+         time_unit: one of ['minute', 'hour', 'day']"""
+
+        interval_options = {
+            'minute': self._TM_DATE_FORMAT_MINUTE,
+            'hour': self._TM_DATE_FORMAT_MINUTE,
+            'day': self._TM_DATE_FORMAT_DAILY
+        }
+
+        return {
+            'currency': trade.symbol,
+            'date_time': self._dt_to_tm_format(trade.open_time, tm_format=interval_options[time_unit]),
+            'api_key': self.api_key
+        }
+
+    def _build_timeseries_params(self, trade: Trade, interval: str = '', period: int = 1):
+        """Create time series request parameters given:
+         fields: any of ['open', 'close', 'high', 'low'];
+        interval: one of ['daily', 'hourly', 'minute'];
+        period: Daily Interval = 1
+                Hourly interval, choices are - 1, 2, 4, 6, 8, 24
+                Minute interval, choices are - 1, 5, 10, 15, 3"""
+
+        if not interval:
+            interval = self._select_interval(trade)
+
+        if not period:
+            period = self._OPTIONS_INTERVAL_TO_PERIOD[interval]
+
+
+        params = {
+            'currency': trade.symbol,
+            'api_key': self.api_key,
+            'start_date': self._dt_to_tm_format(trade.open_time, self._TM_DATE_FORMAT_MINUTE),
+            'end_date': self._dt_to_tm_format(trade.close_time, self._TM_DATE_FORMAT_MINUTE),
+            'interval': interval,
+            'period': period,
+            'format': 'split'
+        }
+        return params
+
+    def build_params(self, endpoint: str, **kwargs):
+        """Build parameters dictionary for a given Tradermade endpoint.
+        Expected endpoints: ['timeseries', 'historical', 'hour_historical', 'minute_historical'].
+        Expected **kwargs:
+        Trade: Trade of type Trade.
+        interval: one of ['daily', 'hourly', 'minute'];
+        period: Daily Interval = 1
+                Hourly interval, choices are - 1, 2, 4, 6, 8, 24
+                Minute interval, choices are - 1, 5, 10, 15, 3;
+        fields = list type ['open', 'close', 'high', 'low']
+        time_unit = one of ['day', 'hour', 'minute']"""
+
+        if endpoint == 'timeseries':
+            return self._build_timeseries_params(**kwargs)
+        elif endpoint in ['historical', 'hour_historical', 'minute_historical']:
+            return self._build_historical_params(**kwargs)
+
+        else:
+            raise ValueError(f"Wrong endpoint {endpoint} given.Expected endpoints: "
+                             f"['timeseries', 'historical', 'hour_historical', 'minute_historical'] ")
+
+    def _get_request(self, params, endpoint: str) -> dict:
+        """make a request to tradermade.
+         Type must be any of the available functionalities: 'timeseries', 'historical',
+         'minute_historical', 'hourly_historical"""
+        request_url = self._BASE_URL + endpoint
+        try:
+            return requests.get(request_url, params).json()
+        except requests.exceptions.RequestException as e:
+            raise SystemExit(e)
+
+    def patched_request(self, endpoint: str, fields, **kwargs) -> pd.DataFrame:
+        """Gets data of a trade from the Tradermade API. Tradermade API requests functions raises Keyvalue error
+        when 'quotes' not in response.json(). this patched version accounts for that possibility.
+        trade: a trade of type Trade;
+        fields: any of ['open', 'close', 'high', 'low'];
+        interval= one of ['daily', 'hourly', 'minute']"""
+
+        params = self.build_params(endpoint=endpoint, **kwargs)
+        data = self._get_request(params, endpoint=endpoint)
+        return self._parse_response(data, fields=fields)
+
+
+    def _set_api_key(self):
+        """Sets the RESTful API, runs on instantiation"""
+        try:
+            tm.set_rest_api_key(self.api_key)
+
+        except Exception as e:
+            logger.info(f'Exception while trying to set the restful API {e}')
+
+    def _select_interval(self, trade: Trade) -> str:
+        """Selects the correct, most optimal interval ('daily', 'hourly', 'minute') to get tm.time_series info
+         for a given trade"""
+
+        time_opened = trade.time_opened.total_seconds()
+        day_in_seconds = 24*60*60
+        less_than_year_old = self._is_recent_than(trade.open_time, days=365)
+        less_than_month_old = self._is_recent_than(trade.open_time, days=29)
+
+        interval = 'daily'
+        if less_than_month_old:
+            if time_opened < 2*day_in_seconds:
+                interval = 'minute'
+            else:
+                interval = 'hourly'
+
+        elif less_than_year_old:
+            if time_opened < 29*day_in_seconds:
+                interval = 'hourly'
+        logger.info(f'{__name__} is less than month old: {less_than_month_old} less than_year_old {less_than_year_old}')
+        return interval
+
+    @staticmethod
+    def _dt_to_tm_format(date: dt.datetime, tm_format: str) -> str:
+        """Formats datetime type to str format"""
+
+        return date.strftime(tm_format)
+
+    @staticmethod
+    def _is_recent_than(date: dt.datetime, days) -> bool:
+        """checks weather a date is older than 'days' days"""
+        if isinstance(date, dt.datetime):
+            how_old = dt.datetime.now() - date
+            days = dt.timedelta(days=days)
+            return how_old.total_seconds() < days.total_seconds()
+        else:
+            return False
+
+    @staticmethod
+    def _parse_response(data: dict, fields) -> pd.DataFrame | dict:
+        if "quotes" not in data:
+            logger.info(f'{__name__} response: {data}')
+            try:
+                return pd.DataFrame(data)[['data'] + fields]
+            except ValueError:
+                return pd.DataFrame()
+
+        df = pd.DataFrame(data["quotes"]["data"], columns=data["quotes"]["columns"])
+        if fields:
+            df = df[["date"] + fields]
+            logger.info(f'response from tradermade request is {data}\n\nDataframe is \n {df}')
+            return df[["date"] + fields]
+        return df
+
+    @property
+    def api_key(self):
+        return self._API_KEI
+
+
 aux = TxtParser.from_filepath('statement.txt')
 operations_infonow = aux.get_operations_info()
 now = TradeData(operations_infonow)
-logger.info(f'TradeData.trades {now.trades} \n\nTradeData.balances {now.balances}')
+logger.info(f'TradeData.trades {len(now.trades)} \n\nTradeData.balances {len(now.balances)}')
+
+tm_client = TraderMadeClient(TM_API_KEY)
+
+one_months = datetime.timedelta(days=3)
+print(dt.datetime.now())
+tm_client.patched_request(endpoint='timeseries', fields=['high', 'low'], trade=now.trades[0])
