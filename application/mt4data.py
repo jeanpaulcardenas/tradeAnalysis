@@ -362,6 +362,7 @@ class TraderMadeClient:
         """make a request to tradermade.
          Type must be any of the available functionalities: 'timeseries', 'historical',
          'minute_historical', 'hourly_historical"""
+
         request_url = self._BASE_URL + endpoint
         try:
             return requests.get(request_url, params).json()
@@ -382,6 +383,7 @@ class TraderMadeClient:
 
     def _set_api_key(self):
         """Sets the RESTful API, runs on instantiation"""
+
         try:
             tm.set_rest_api_key(self.api_key)
 
@@ -414,6 +416,7 @@ class TraderMadeClient:
     def _get_optimal_period(time_opened: dt.timedelta, interval: str) -> int:
         """Selects the largest possible period for a trade,
          as of not to get unnecessary heavy responses from the timeseries request"""
+
         thresholds = {
             'minute': [
                 (60 * 12, 30),
@@ -445,6 +448,7 @@ class TraderMadeClient:
     @staticmethod
     def _is_recent_than(date: dt.datetime, days: int) -> bool:
         """checks weather a date is older than 'days' days"""
+
         if isinstance(date, dt.datetime):
             how_old = dt.datetime.now() - date
             days = dt.timedelta(days=days)
@@ -456,6 +460,7 @@ class TraderMadeClient:
     def _parse_response(data: dict, fields: list[str]) -> pd.DataFrame | dict:
         """Handles tradermade api request answer, returns data frame with [fields] columns if the call was correct.
          returns empty dataframe in any other case"""
+
         logger.info(f'{__name__} tradermade request response: {data}')
         if "quotes" not in data:
             logger.info(f'quotes not in response {data}')
@@ -476,6 +481,7 @@ class TraderMadeClient:
     def _start_date_correction(interval: str, open_date: dt.datetime, close_date: dt.datetime) -> dt.timedelta:
         """Trader made won't get start_date data for daily intervals in some specific cases.
         This function fixes the malfunction, returning tm.timedelta(days=-1) to add it to date_start when needed"""
+
         if interval == 'daily':
             if open_date.hour < 17 or open_date.day == close_date.day:
                 return dt.timedelta(days=-1)
