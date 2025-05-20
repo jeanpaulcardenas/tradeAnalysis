@@ -286,12 +286,12 @@ class TraderMadeClient:
     _MINUTE_HISTORICAL_ENDPOINT = 'minute_historical'
     _TM_DATE_FORMAT_MINUTE = '%Y-%m-%d-%H:%M'
     _TM_DATE_FORMAT_DAILY = '%Y-%m-%d'
-    _OPTIONS_INTERVAL_TO_PERIOD = {'minute': 5, 'hourly': 1, 'daily': 1}
+
     def __init__(self, tm_api_key):
         self._API_KEI = tm_api_key
         self._set_api_key()
 
-    def _build_historical_params(self, trade: Trade, time_unit: str):
+    def _build_historical_params(self, trade: Trade, time_unit: str = 'day') -> dict:
         """Create hour historical request parameters given:
          fields: any of ['open', 'close', 'high', 'low'];
          trade: a trade of type Trade;
@@ -305,11 +305,11 @@ class TraderMadeClient:
 
         return {
             'currency': trade.symbol,
-            'date_time': self._dt_to_tm_format(trade.open_time, tm_format=interval_options[time_unit]),
+            'date_time': dt.datetime.strftime(trade.open_time, interval_options[time_unit]),
             'api_key': self.api_key
         }
 
-    def _build_timeseries_params(self, trade: Trade, interval: str = '', period: int = 1):
+    def _build_timeseries_params(self, trade: Trade, interval: str = '', period: int = '') -> dict:
         """Create time series request parameters given:
          fields: any of ['open', 'close', 'high', 'low'];
         interval: one of ['daily', 'hourly', 'minute'];
@@ -318,24 +318,26 @@ class TraderMadeClient:
                 Minute interval, choices are - 1, 5, 10, 15, 3"""
 
         if not interval:
-            interval = self._select_interval(trade)
+            interval = self._optimal_interval(trade)
 
         if not period:
-            period = self._OPTIONS_INTERVAL_TO_PERIOD[interval]
+            period = self._get_optimal_period(trade.time_opened, interval)
 
+        tm_start_correction = self._start_date_correction(interval, trade.open_time, trade.close_time)
 
         params = {
             'currency': trade.symbol,
             'api_key': self.api_key,
-            'start_date': self._dt_to_tm_format(trade.open_time, self._TM_DATE_FORMAT_MINUTE),
-            'end_date': self._dt_to_tm_format(trade.close_time, self._TM_DATE_FORMAT_MINUTE),
+            'start_date': dt.datetime.strftime(trade.open_time + tm_start_correction, self._TM_DATE_FORMAT_MINUTE),
+            'end_date': dt.datetime.strftime(trade.close_time, self._TM_DATE_FORMAT_MINUTE),
             'interval': interval,
             'period': period,
             'format': 'split'
         }
+        logger.info(f'{__name__} {__class__} api call parameters {params}')
         return params
 
-    def build_params(self, endpoint: str, **kwargs):
+    def build_params(self, endpoint: str, **kwargs) -> dict:
         """Build parameters dictionary for a given Tradermade endpoint.
         Expected endpoints: ['timeseries', 'historical', 'hour_historical', 'minute_historical'].
         Expected **kwargs:
@@ -343,7 +345,7 @@ class TraderMadeClient:
         interval: one of ['daily', 'hourly', 'minute'];
         period: Daily Interval = 1
                 Hourly interval, choices are - 1, 2, 4, 6, 8, 24
-                Minute interval, choices are - 1, 5, 10, 15, 3;
+                Minute interval, choices are - 1, 5, 10, 15; 30;
         fields = list type ['open', 'close', 'high', 'low']
         time_unit = one of ['day', 'hour', 'minute']"""
 
@@ -356,7 +358,7 @@ class TraderMadeClient:
             raise ValueError(f"Wrong endpoint {endpoint} given.Expected endpoints: "
                              f"['timeseries', 'historical', 'hour_historical', 'minute_historical'] ")
 
-    def _get_request(self, params, endpoint: str) -> dict:
+    def _get_request(self, params: dict, endpoint: str) -> dict:
         """make a request to tradermade.
          Type must be any of the available functionalities: 'timeseries', 'historical',
          'minute_historical', 'hourly_historical"""
@@ -364,7 +366,8 @@ class TraderMadeClient:
         try:
             return requests.get(request_url, params).json()
         except requests.exceptions.RequestException as e:
-            raise SystemExit(e)
+            logger.warning(f'Bad request: {e}')
+            return {}
 
     def patched_request(self, endpoint: str, fields, **kwargs) -> pd.DataFrame:
         """Gets data of a trade from the Tradermade API. Tradermade API requests functions raises Keyvalue error
@@ -377,7 +380,6 @@ class TraderMadeClient:
         data = self._get_request(params, endpoint=endpoint)
         return self._parse_response(data, fields=fields)
 
-
     def _set_api_key(self):
         """Sets the RESTful API, runs on instantiation"""
         try:
@@ -386,36 +388,62 @@ class TraderMadeClient:
         except Exception as e:
             logger.info(f'Exception while trying to set the restful API {e}')
 
-    def _select_interval(self, trade: Trade) -> str:
+    def _optimal_interval(self, trade: Trade) -> str:
         """Selects the correct, most optimal interval ('daily', 'hourly', 'minute') to get tm.time_series info
          for a given trade"""
 
         time_opened = trade.time_opened.total_seconds()
-        day_in_seconds = 24*60*60
+        day_in_seconds = 24 * 60 * 60
         less_than_year_old = self._is_recent_than(trade.open_time, days=365)
         less_than_month_old = self._is_recent_than(trade.open_time, days=29)
 
         interval = 'daily'
         if less_than_month_old:
-            if time_opened < 2*day_in_seconds:
+            if time_opened < 2 * day_in_seconds:
                 interval = 'minute'
             else:
                 interval = 'hourly'
 
         elif less_than_year_old:
-            if time_opened < 29*day_in_seconds:
+            if time_opened < 29 * day_in_seconds:
                 interval = 'hourly'
         logger.info(f'{__name__} is less than month old: {less_than_month_old} less than_year_old {less_than_year_old}')
         return interval
 
     @staticmethod
-    def _dt_to_tm_format(date: dt.datetime, tm_format: str) -> str:
-        """Formats datetime type to str format"""
+    def _get_optimal_period(time_opened: dt.timedelta, interval: str) -> int:
+        """Selects the largest possible period for a trade,
+         as of not to get unnecessary heavy responses from the timeseries request"""
+        thresholds = {
+            'minute': [
+                (60 * 12, 30),
+                (60 * 6, 15),
+                (60 * 2, 6),
+                (30, 2),
+            ],
+            'hourly': [
+                (60 * 24 * 15, 8),
+                (60 * 24 * 8, 6),
+                (60 * 24 * 4, 4),
+                (60 * 24 * 2, 2)
 
-        return date.strftime(tm_format)
+            ],
+            'daily': [
+                (0, 1)
+            ]}
+
+        if interval in ['minute', 'hourly', 'daily']:
+            for threshold, period in thresholds[interval]:
+                if time_opened.total_seconds() / 60 > threshold:
+                    return period
+        else:
+            logger.info(f'{__name__} {__class__} interval {interval} for'
+                        f'must be one of ["minute", "hourly", "daily"]'
+                        f'returned 1 to avoid crash, not optimal')
+        return 1
 
     @staticmethod
-    def _is_recent_than(date: dt.datetime, days) -> bool:
+    def _is_recent_than(date: dt.datetime, days: int) -> bool:
         """checks weather a date is older than 'days' days"""
         if isinstance(date, dt.datetime):
             how_old = dt.datetime.now() - date
@@ -425,20 +453,34 @@ class TraderMadeClient:
             return False
 
     @staticmethod
-    def _parse_response(data: dict, fields) -> pd.DataFrame | dict:
+    def _parse_response(data: dict, fields: list[str]) -> pd.DataFrame | dict:
+        """Handles tradermade api request answer, returns data frame with [fields] columns if the call was correct.
+         returns empty dataframe in any other case"""
+        logger.info(f'{__name__} tradermade request response: {data}')
         if "quotes" not in data:
-            logger.info(f'{__name__} response: {data}')
-            try:
-                return pd.DataFrame(data)[['data'] + fields]
-            except ValueError:
-                return pd.DataFrame()
+            logger.info(f'quotes not in response {data}')
+            return pd.DataFrame()
 
         df = pd.DataFrame(data["quotes"]["data"], columns=data["quotes"]["columns"])
         if fields:
-            df = df[["date"] + fields]
-            logger.info(f'response from tradermade request is {data}\n\nDataframe is \n {df}')
-            return df[["date"] + fields]
-        return df
+            try:
+                df = df[["date"] + fields]
+            except KeyError as e:
+                logger.warning(f"Some requested fields not found in data: {e}")
+                df = pd.DataFrame()
+            finally:
+                logger.info(f'{__name__} dataframe from Tradermade\n {df.head()}')
+                return df
+
+    @staticmethod
+    def _start_date_correction(interval: str, open_date: dt.datetime, close_date: dt.datetime) -> dt.timedelta:
+        """Trader made won't get start_date data for daily intervals in some specific cases.
+        This function fixes the malfunction, returning tm.timedelta(days=-1) to add it to date_start when needed"""
+        if interval == 'daily':
+            if open_date.hour < 17 or open_date.day == close_date.day:
+                return dt.timedelta(days=-1)
+
+        return dt.timedelta(seconds=0)
 
     @property
     def api_key(self):
@@ -454,4 +496,5 @@ tm_client = TraderMadeClient(TM_API_KEY)
 
 one_months = datetime.timedelta(days=3)
 print(dt.datetime.now())
-tm_client.patched_request(endpoint='timeseries', fields=['high', 'low'], trade=now.trades[0])
+df = tm_client.patched_request(endpoint='timeseries', fields=['high', 'low'], trade=now.trades[0])
+print(df.info())
