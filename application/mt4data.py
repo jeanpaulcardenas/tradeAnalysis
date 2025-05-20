@@ -51,7 +51,7 @@ class TxtParser:
 
         self._raw_html = txt
         self.my_html_list = self._create_html_list(self.raw_html)
-        logger.info(f'TxtParser creation')
+        logger.info(f"TxtParser creation")
 
     def get_operations_info(self) -> list[list[str]]:
         """returns a list with the meaningful data of the trades and balances of the MT4 operations report"""
@@ -151,7 +151,7 @@ class TradeData:
         self._insert_balance_type()
         self._insert_time_opened()
 
-        logger.info(f' {__name__}trades info {self.trades[0]} balance info {len(self.balances)}')
+        logger.info(f" {__name__} amount of traes {len(self.trades)} amount of balances {len(self.balances)}")
 
     def _insert_time_opened(self):
         """Assigns dt.timedelta value for opening and closing times in Trade.time_opened"""
@@ -334,7 +334,7 @@ class TraderMadeClient:
             'period': period,
             'format': 'split'
         }
-        logger.info(f'{__name__} {__class__} api call parameters {params}')
+        logger.info(f"{__name__} {__class__} api call parameters {params}")
         return params
 
     def build_params(self, endpoint: str, **kwargs) -> dict:
@@ -367,7 +367,7 @@ class TraderMadeClient:
         try:
             return requests.get(request_url, params).json()
         except requests.exceptions.RequestException as e:
-            logger.warning(f'Bad request: {e}')
+            logger.warning(f"Bad request: {e}")
             return {}
 
     def patched_request(self, endpoint: str, fields, **kwargs) -> pd.DataFrame:
@@ -388,7 +388,7 @@ class TraderMadeClient:
             tm.set_rest_api_key(self.api_key)
 
         except Exception as e:
-            logger.info(f'Exception while trying to set the restful API {e}')
+            logger.info(f"Exception while trying to set the restful API {e}")
 
     def _optimal_interval(self, trade: Trade) -> str:
         """Selects the correct, most optimal interval ('daily', 'hourly', 'minute') to get tm.time_series info
@@ -409,8 +409,32 @@ class TraderMadeClient:
         elif less_than_year_old:
             if time_opened < 29 * day_in_seconds:
                 interval = 'hourly'
-        logger.info(f'{__name__} is less than month old: {less_than_month_old} less than_year_old {less_than_year_old}')
+        logger.info(f"{__name__} is less than month old: {less_than_month_old} less than_year_old {less_than_year_old}")
         return interval
+
+    def complete_trade_high_low(self, trades: list[Trade]):
+        """Completes 'trades.high' and 'trades.low' from a list of trades. Uses tradermade api to complete it
+        'trades.high' is the max value in between 'trade.open_time' and 'trade.close_time'
+        'trades.low' is the min value in between 'trade.open_time' and 'trade.close_time'"""
+        for trade in trades:
+            try:
+                df = self.patched_request(
+                    endpoint='timeseries',
+                    fields=['high', 'low'],
+                    trade=trade
+                )
+
+                if df.empty:
+                    logger.warning(f"No data for trade {trade.order}")
+                    trade.high = max(trade.open_price, trade.close_price)
+                    trade.low = trade.low = min(trade.open_price, trade.close_price)
+                    continue
+
+                trade.high = max(df['high'].max(), trade.open_price, trade.close_price)
+                trade.low = min(df['low'].min(), trade.open_price, trade.close_price)
+
+            except Exception as e:
+                logger.warning(f"Failed to fetch high/low for trade {trade.order}: {e}")
 
     @staticmethod
     def _get_optimal_period(time_opened: dt.timedelta, interval: str) -> int:
@@ -461,7 +485,7 @@ class TraderMadeClient:
         """Handles tradermade api request answer, returns data frame with [fields] columns if the call was correct.
          returns empty dataframe in any other case"""
 
-        logger.info(f'{__name__} tradermade request response: {data}')
+        logger.info(f"{__name__} tradermade request keys: {data.keys()}")
         if "quotes" not in data:
             logger.info(f'quotes not in response {data}')
             return pd.DataFrame()
@@ -474,7 +498,7 @@ class TraderMadeClient:
                 logger.warning(f"Some requested fields not found in data: {e}")
                 df = pd.DataFrame()
             finally:
-                logger.info(f'{__name__} dataframe from Tradermade\n {df.head()}')
+                logger.info(f"{__name__} dataframe from Tradermade\n {df.head()}")
                 return df
 
     @staticmethod
@@ -496,11 +520,9 @@ class TraderMadeClient:
 aux = TxtParser.from_filepath('statement.txt')
 operations_infonow = aux.get_operations_info()
 now = TradeData(operations_infonow)
-logger.info(f'TradeData.trades {len(now.trades)} \n\nTradeData.balances {len(now.balances)}')
 
 tm_client = TraderMadeClient(TM_API_KEY)
 
 one_months = datetime.timedelta(days=3)
-print(dt.datetime.now())
-df = tm_client.patched_request(endpoint='timeseries', fields=['high', 'low'], trade=now.trades[0])
-print(df.info())
+tm_client.complete_trade_high_low(now.trades)
+print(now.trades)
