@@ -9,6 +9,7 @@ import requests
 import pandas as pd
 import base64
 import re
+import pickle
 
 logger = get_logger(__name__)
 
@@ -67,7 +68,7 @@ class TxtParser:
         return operations_info
 
     def get_account_info(self) -> dict:
-        """returns number Account, Name, Currency and Leverage from MT4 report"""
+        """returns number account, name, currency and leverage from MT4 report"""
 
         acct_info_raw = self._extract_section_from_html_list(
             my_list=self.my_html_list,
@@ -79,7 +80,7 @@ class TxtParser:
             values = re.split(r': ', td_content[0])
 
             try:
-                acct_info[values[0]] = values[1]
+                acct_info[values[0].lower()] = values[1]
             except IndexError:
                 pass
         return acct_info
@@ -137,11 +138,14 @@ class TxtParser:
         return self._raw_html
 
 
+# TODO: take into account timezones! currenty it's considering only UTC/GMT
+#  if the broker uses another timezone every data gotten from the TraderMadeClient would awfully inaccurate
 class TradeData:
     _HTML_DATE_SOURCE_FORMAT = "%Y.%m.%d %H:%M:%S"
 
-    def __init__(self, trades_info: list[list[str]]):
-        self.raw_operations = trades_info
+    def __init__(self, trades_info: TxtParser):
+        self.raw_operations = trades_info.get_operations_info()
+        self.currency = trades_info.get_account_info()['currency']
         self._trades_raw = []
         self._balances_raw = []
 
@@ -516,13 +520,15 @@ class TraderMadeClient:
     def api_key(self):
         return self._API_KEI
 
+if __name__ == '__main__':
+    aux = TxtParser.from_filepath('statement.txt')
+    operations_infonow = aux.get_operations_info()
+    now = TradeData(aux)
 
-aux = TxtParser.from_filepath('statement.txt')
-operations_infonow = aux.get_operations_info()
-now = TradeData(operations_infonow)
+    tm_client = TraderMadeClient(TM_API_KEY)
 
-tm_client = TraderMadeClient(TM_API_KEY)
-
-one_months = datetime.timedelta(days=3)
-tm_client.complete_trade_high_low(now.trades)
-print(now.trades)
+    one_months = datetime.timedelta(days=3)
+    tm_client.complete_trade_high_low(now.trades)
+    print(now.trades)
+    with open("./cached_trade_data.pkl", "wb") as f:
+        pickle.dump(now, f)
