@@ -33,6 +33,8 @@ class Trade:
     high: float = 0
     low: float = 0
     time_opened: dt.timedelta = 0
+    base: str = ''
+    quote: str = ''
 
 
 @dataclass
@@ -145,17 +147,25 @@ class TradeData:
 
     def __init__(self, trades_info: TxtParser):
         self.raw_operations = trades_info.get_operations_info()
-        self.currency = trades_info.get_account_info()['currency']
+        self._currency = trades_info.get_account_info()['currency']
         self._trades_raw = []
         self._balances_raw = []
-
         self._split_operations()
         self._create_trade_objects()
         self._create_balance_objects()
         self._insert_balance_type()
         self._insert_time_opened()
+        self._update_base_and_quote()
+        self.update_forex_trades_list()
 
         logger.info(f" {__name__} amount of traes {len(self.trades)} amount of balances {len(self.balances)}")
+
+    def update_forex_trades_list(self):
+        """a list of forex trades objects.
+        only Forex currency pairs are kept in this list. It's a filter of 'self.trades'"""
+        for trade in self.trades:
+            if trade.base in PAIRS and trade.quote in PAIRS:
+                self.forex_trades.append(trade)
 
     def _insert_time_opened(self):
         """Assigns dt.timedelta value for opening and closing times in Trade.time_opened"""
@@ -211,6 +221,15 @@ class TradeData:
         except Exception as e:
             logger.warning(f"Failed to parse trade row: {row} | Error: {e}")
             return None
+
+    def _update_base_and_quote(self):
+        """Updates 'trade.quote' and 'trade.base' as it's initiated as an empty string.
+        Returns 'None' if symbol is not a forex tradable"""
+
+        for trade in self.trades:
+            if len(trade.symbol) == 6:
+                trade.base = trade.symbol[:3]
+                trade.quote = trade.symbol[3:]
 
     @staticmethod
     def _parse_trade(row: list, date_format: str) -> Trade | None:
@@ -280,6 +299,14 @@ class TradeData:
     @property
     def balances(self):
         return self._balance_objects
+
+    @property
+    def currency(self):
+        return self._currency
+
+    @property
+    def forex_trades(self):
+        return [t for t in self.trades if t.base in PAIRS and t.quote in PAIRS]
 
 
 class TraderMadeClient:
@@ -431,7 +458,7 @@ class TraderMadeClient:
                 if df.empty:
                     logger.warning(f"No data for trade {trade.order}")
                     trade.high = max(trade.open_price, trade.close_price)
-                    trade.low = trade.low = min(trade.open_price, trade.close_price)
+                    trade.low = min(trade.open_price, trade.close_price)
                     continue
 
                 trade.high = max(df['high'].max(), trade.open_price, trade.close_price)
@@ -520,6 +547,7 @@ class TraderMadeClient:
     def api_key(self):
         return self._API_KEI
 
+
 if __name__ == '__main__':
     aux = TxtParser.from_filepath('statement.txt')
     operations_infonow = aux.get_operations_info()
@@ -529,6 +557,6 @@ if __name__ == '__main__':
 
     one_months = datetime.timedelta(days=3)
     tm_client.complete_trade_high_low(now.trades)
-    print(now.trades)
+    print(now.forex_trades)
     with open("./cached_trade_data.pkl", "wb") as f:
         pickle.dump(now, f)
