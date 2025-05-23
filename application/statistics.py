@@ -49,47 +49,57 @@ class Metrics:
 
     @property
     def n_trades_won(self) -> float:
+        """Counts the number of winning trades"""
         return self.df.won_trade.sum()
 
     @property
     def n_trades_loss(self) -> float:
+        """Counts the number of losing trades (negative profit)"""
         return (self.df.won_trade == 0).sum()
 
     @property
     @zero_division_to_zero
-    def trades_win_rate(self) -> float:
+    def win_rate(self) -> float:
+        """trades won / number of trades"""
         return self.n_trades_won/self.n_of_trades
 
     @property
     def gross_revenue(self) -> float:
+        """sum of all wining trades profit"""
         return self.df.profit[self.df['won_trade']].sum()
 
     @property
     def gross_loss(self) -> float:
+        """sum of all losing trades loss"""
         return self.df.profit[self.df.won_trade == 0].sum()
 
     @property
     def net_income(self) -> float:
+        """returns the sum of all profits. (loss - earnings)"""
         return self.gross_revenue + self.gross_loss
 
     @property
     @zero_division_to_zero
-    def avg_trade_profit(self) -> float:
+    def expectancy(self) -> float:
+        """	Shows average expected outcome per trade — excellent for evaluation."""
         return self.net_income/self.n_of_trades
 
     @property
     @zero_division_to_zero
     def avg_win_trade_profit(self) -> float:
+        """average winning trade profit"""
         return self.gross_revenue/self.n_trades_won
 
     @property
     @zero_division_to_zero
-    def avg_loss_trade_loss(self):
+    def avg_lose_trade_loss(self) -> float:
+        """average losing trade loss"""
         return self.gross_loss/self.n_trades_loss
 
     @property
-    def avg_win_over_loss(self):
-        return self.avg_win_trade_profit/self.avg_loss_trade_loss
+    def avg_win_over_loss(self) -> float:
+        """ratio between the average won trade profit to the average losing trade loss """
+        return self.avg_win_trade_profit/self.avg_lose_trade_loss
 
     @property
     @zero_division_to_zero
@@ -105,18 +115,17 @@ class Metrics:
     @property
     @zero_division_to_zero
     def efficiency(self) -> float:
+        """returns the ratio between the obtained revenue (only winning trades) to the 'perfect possible income'
+        it's: gross_revenue/perfect_efficiency_income"""
         return self.gross_revenue/self.perfect_efficiency_income
 
     @property
     def most_traded(self) -> str:
+        """returns the symbol of the most traded pair"""
         try:
             return self.df.symbol.mode()[0]
         except KeyError:
             return ''
-
-    @property
-    def get_n_of_trades(self) -> int:
-        return self.df.shape[0]
 
     @property
     def n_of_trades(self) -> int:
@@ -143,6 +152,7 @@ class Metrics:
         return self.df.profit.min()
 
     def get_max_run_up(self):
+        """returns the value of the max run up """
         accumulative_profit = self.df.accum.to_list()
         min_val = 0
         max_runup = 0
@@ -173,15 +183,15 @@ class Metrics:
     def _complete_dataframe(self):
         """Add key columns to the dataframe for analysis.
 
-        Columns: max_possible_gain, max_possible_loss, day_of_week, won_trade, accumulative_profit"""
+        Columns: max_possible_gain, max_possible_loss, day_of_week, won_trade, accumulative_profit, 'pips'"""
 
         self.df['max_possible_gain'] = self.df.apply(func=self._get_max_gain, axis='columns')
         self.df['max_possible_loss'] = self.df.apply(func=lambda row: round(self._get_max_gain(row, True), 2),
                                                      axis='columns')
         self.df['accumulative_profit'] = self.df.profit.cumsum()
-        self.df['day of week'] = self.df.close_time.apply(func=lambda date: Metrics.dow[date.weekday()])
+        self.df['day_of_week'] = self.df.close_time.apply(func=lambda date: Metrics.dow[date.weekday()])
         self.df['won_trade'] = (self.df.profit > 0)
-        self.df['pip'] = self.df.apply(Metrics._get_pips, axis='columns')
+        self.df['pips'] = self.df.apply(Metrics._get_pips, axis='columns')
         self.df.symbol = self.df.symbol.astype('category')
         self.df.order_type = self.df.symbol.astype('category')
 
