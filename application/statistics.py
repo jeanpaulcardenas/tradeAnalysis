@@ -79,6 +79,20 @@ class Metrics:
 
     @property
     @zero_division_to_zero
+    def avg_win_trade_profit(self) -> float:
+        return self.gross_revenue/self.n_trades_won
+
+    @property
+    @zero_division_to_zero
+    def avg_loss_trade_loss(self):
+        return self.gross_loss/self.n_trades_loss
+
+    @property
+    def avg_win_over_loss(self):
+        return self.avg_win_trade_profit/self.avg_loss_trade_loss
+
+    @property
+    @zero_division_to_zero
     def profit_factor(self) -> float:
         """profit factor: gross loss / gross gross_revenue"""
         return self.gross_revenue/self.gross_loss
@@ -112,6 +126,22 @@ class Metrics:
     def currency(self) -> str:
         return self._currency
 
+    @property
+    def consecutive_wins(self):
+        return self._max_consecutive_streak(True)
+
+    @property
+    def consecutive_losses(self):
+        return self._max_consecutive_streak(False)
+
+    @property
+    def largest_earning_trade(self):
+        return self.df.profit.max()
+
+    @property
+    def largest_loss_trade(self):
+        return self.df.profit.min()
+
     def get_max_run_up(self):
         accumulative_profit = self.df.accum.to_list()
         min_val = 0
@@ -126,6 +156,19 @@ class Metrics:
     def sort_df_values(self, by):
         """sorts dataframe by values 'by'. 'by' must be any of the available column names"""
         self.df.sort_values(by=by, inplace=True, ignore_index=True)
+
+    def _max_consecutive_streak(self, condition: bool = True):
+        """Returns the maximum consecutive streak of trades where won_trade == condition"""
+        max_streak = 0
+        streak = 0
+        for val in self.df.won_trade:
+            if val == condition:
+                streak += 1
+                if streak > max_streak:
+                    max_streak = streak
+            else:
+                streak = 0
+        return max_streak
 
     def _complete_dataframe(self):
         """Add key columns to the dataframe for analysis.
