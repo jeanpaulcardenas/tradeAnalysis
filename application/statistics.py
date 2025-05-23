@@ -112,6 +112,17 @@ class Metrics:
     def currency(self) -> str:
         return self._currency
 
+    def get_max_run_up(self):
+        accumulative_profit = self.df.accum.to_list()
+        min_val = 0
+        max_runup = 0
+        for val in accumulative_profit:
+            if val < min_val:
+                min_val = val
+            elif val - min_val > max_runup:
+                max_runup = val - min_val
+        return max_runup
+
     def sort_df_values(self, by):
         """sorts dataframe by values 'by'. 'by' must be any of the available column names"""
         self.df.sort_values(by=by, inplace=True, ignore_index=True)
@@ -121,10 +132,11 @@ class Metrics:
 
         Columns: max_possible_gain, max_possible_loss, day_of_week, won_trade, accumulative_profit"""
 
-        self.df['max_possible_gain'] = self.df.apply(self._get_max_gain, axis='columns')
-        self.df['max_possible_loss'] = self.df.apply(lambda row: round(self._get_max_gain(row, True), 2), axis='columns')
+        self.df['max_possible_gain'] = self.df.apply(func=self._get_max_gain, axis='columns')
+        self.df['max_possible_loss'] = self.df.apply(func=lambda row: round(self._get_max_gain(row, True), 2),
+                                                     axis='columns')
         self.df['accumulative_profit'] = self.df.profit.cumsum()
-        self.df['day of week'] = self.df.close_time.apply(lambda date: Metrics.dow[date.weekday()])
+        self.df['day of week'] = self.df.close_time.apply(func=lambda date: Metrics.dow[date.weekday()])
         self.df['won_trade'] = (self.df.profit > 0)
         self.df['pip'] = self.df.apply(Metrics._get_pips, axis='columns')
         self.df.symbol = self.df.symbol.astype('category')
