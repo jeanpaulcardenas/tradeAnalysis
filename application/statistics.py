@@ -43,17 +43,9 @@ class Metrics:
             self._complete_dataframe()
         else:
             keys = [field.name for field in fields(Trade)]\
-                   + ['won_trade', 'max_possible_gain', 'max_possible_loss', 'accumulative_profit', 'day']
+                 + ['won_trade', 'max_possible_gain', 'max_possible_loss', 'accumulative_profit', 'day of week', 'pip']
             self.df = pd.DataFrame(columns=keys)
             print(self.df.to_string())
-
-        # self.mom_grow_seriesth = 0
-        # self.max_run_up = round(self.get_runup())
-        # self.max_drawdown = round(self.get_drawdown())
-        # self.t_time_mean = st.mean(self.df.time)
-        # self.t_efficiency = divide(self.t_net_income, self.max_income_possible)
-        # self.act_count_df = self.act_count()
-        # self.most_traded = self.get_most_traded()
 
     @property
     def n_trades_won(self) -> float:
@@ -129,15 +121,16 @@ class Metrics:
 
         Columns: max_possible_gain, max_possible_loss, day_of_week, won_trade, accumulative_profit"""
 
-        self.df['max_possible_gain'] = self.df.apply(self.get_max_gain, axis='columns')
-        self.df['max_possible_loss'] = self.df.apply(lambda row: round(self.get_max_gain(row, True), 2), axis='columns')
+        self.df['max_possible_gain'] = self.df.apply(self._get_max_gain, axis='columns')
+        self.df['max_possible_loss'] = self.df.apply(lambda row: round(self._get_max_gain(row, True), 2), axis='columns')
         self.df['accumulative_profit'] = self.df.profit.cumsum()
-        self.df['day'] = [self.dow[date.weekday()] for date in self.df.close_time]
+        self.df['day of week'] = self.df.close_time.apply(lambda date: Metrics.dow[date.weekday()])
         self.df['won_trade'] = (self.df.profit > 0)
+        self.df['pip'] = self.df.apply(Metrics._get_pips, axis='columns')
         self.df.symbol = self.df.symbol.astype('category')
         self.df.order_type = self.df.symbol.astype('category')
 
-    def get_max_gain(self, row: pd.Series, max_loss: bool = False) -> float:
+    def _get_max_gain(self, row: pd.Series, max_loss: bool = False) -> float:
         """gets max gain possible gain for a trade, taking into account whether it's a buy or a sell trade.
         max_loss inverts the logic, so we can calculate the maximum possible loss. It's done by comparing it to what
         the profit would have been if closed in high price (or low price for max_loss=True)"""
@@ -147,17 +140,17 @@ class Metrics:
             limits.reverse()
         gain = - 10 ** 100
         if row.order_type == 'buy':
-            gain = self.get_trade_profit(row, limits[0])
+            gain = self._get_trade_profit(row, limits[0])
         elif row.order_type == 'sell':
-            gain = -self.get_trade_profit(row, limits[1])
+            gain = -self._get_trade_profit(row, limits[1])
 
-        if self._max_is_less_than_actual(gain, row.profit, max_loss):
+        if Metrics._max_is_less_than_actual(gain, row.profit, max_loss):
             logger.warning(f'In trade order: {row.order} max_possible_gain/loss {round(gain, 2)} '
                            f'is less than profit {row.profit}')
             return row.profit
         return gain
 
-    def get_trade_profit(self, row: pd.Series, final_value) -> float:
+    def _get_trade_profit(self, row: pd.Series, final_value) -> float:
         """Gets the profit from open_price to a settable final price.
         if account currency is not the quote nor base currency, the rule of three is used.
         This might not work when open and close price are equal, in which case profit returned is 0."""
@@ -179,6 +172,14 @@ class Metrics:
 
         else:
             return row.profit
+
+    @staticmethod
+    def _get_pips(row: pd.Series):
+        diff = row.close_price - row.open_price
+        if 'JPY' in row.symbol:
+            return 100 * diff
+        else:
+            return 10 ** 4 * diff
 
     @staticmethod
     def _max_is_less_than_actual(maxim: float, actual: float, reverse: bool = False) -> bool:
