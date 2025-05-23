@@ -156,16 +156,8 @@ class TradeData:
         self._insert_balance_type()
         self._insert_time_opened()
         self._update_base_and_quote()
-        self.update_forex_trades_list()
 
         logger.info(f" {__name__} amount of traes {len(self.trades)} amount of balances {len(self.balances)}")
-
-    def update_forex_trades_list(self):
-        """a list of forex trades objects.
-        only Forex currency pairs are kept in this list. It's a filter of 'self.trades'"""
-        for trade in self.trades:
-            if trade.base in PAIRS and trade.quote in PAIRS:
-                self.forex_trades.append(trade)
 
     def _insert_time_opened(self):
         """Assigns dt.timedelta value for opening and closing times in Trade.time_opened"""
@@ -320,7 +312,7 @@ class TraderMadeClient:
     _TM_DATE_FORMAT_DAILY = '%Y-%m-%d'
 
     def __init__(self, tm_api_key):
-        self._API_KEI = tm_api_key
+        self._API_KEY = tm_api_key
         self._set_api_key()
 
     def complete_trade_high_low(self, trades: list[Trade]):
@@ -549,7 +541,7 @@ class TraderMadeClient:
 
     @property
     def api_key(self):
-        return self._API_KEI
+        return self._API_KEY
 
 
 if __name__ == '__main__':
