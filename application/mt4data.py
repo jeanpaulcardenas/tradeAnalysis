@@ -53,32 +53,32 @@ class TxtParser:
         """txt is the raw html string of the mt4 statement"""
 
         self._raw_html = txt
-        self.my_html_list = self._create_html_list(self.raw_html)
+        self.my_html_list = TxtParser._create_html_list(self.raw_html)
         logger.info(f"TxtParser creation")
 
     def get_operations_info(self) -> list[list[str]]:
         """returns a list with the meaningful data of the trades and balances of the MT4 operations report"""
 
-        operations_raw = self._extract_section_from_html_list(
+        operations_raw = TxtParser._extract_section_from_html_list(
             my_list=self.my_html_list,
-            start=self._ABOVE_TRADES_REF_LINE,
+            start=TxtParser._ABOVE_TRADES_REF_LINE,
         )
         operations_info = list()
         for line in operations_raw:
-            td_content = self.parse_td(line)
+            td_content = TxtParser._parse_td(line)
             operations_info.append(td_content)
         return operations_info
 
     def get_account_info(self) -> dict:
         """returns number account, name, currency and leverage from MT4 report"""
 
-        acct_info_raw = self._extract_section_from_html_list(
+        acct_info_raw = TxtParser._extract_section_from_html_list(
             my_list=self.my_html_list,
-            start=self._ABOVE_ACCT_REF_LINE,
+            start=TxtParser._ABOVE_ACCT_REF_LINE,
         )
         acct_info = dict()
         for line in acct_info_raw:
-            td_content = self.parse_td(line)
+            td_content = TxtParser._parse_td(line)
             values = re.split(r': ', td_content[0])
 
             try:
@@ -130,7 +130,7 @@ class TxtParser:
         return section
 
     @staticmethod
-    def parse_td(td: str) -> list[str]:
+    def _parse_td(td: str) -> list[str]:
         """Parses an HTML string containing <td> tags and returns a list of their inner text values"""
         all_td_content = [td.text for td in BeautifulSoup(td, 'html.parser')('td')]
         return all_td_content
@@ -179,7 +179,7 @@ class TradeData:
 
         self._balance_objects = [
             obj for r in self._balances_raw
-            if (obj := self._parse_balance(r, self._HTML_DATE_SOURCE_FORMAT))
+            if (obj := TradeData._parse_balance(r, self._HTML_DATE_SOURCE_FORMAT))
         ]
 
     def _create_trade_objects(self):
@@ -187,7 +187,7 @@ class TradeData:
 
         self._trade_objects = [
             obj for r in self._trades_raw
-            if (obj := self._parse_trade(r, self._HTML_DATE_SOURCE_FORMAT))
+            if (obj := TradeData._parse_trade(r, self._HTML_DATE_SOURCE_FORMAT))
         ]
 
     def _split_operations(self):
@@ -195,25 +195,26 @@ class TradeData:
         and balances are stored in self._balances"""
 
         for row in self.raw_operations:
-            if self._is_trade(row):
+            if TradeData._is_trade(row):
                 self._trades_raw.append(row)
 
-            elif self._is_balance(row):
+            elif TradeData._is_balance(row):
                 self._balances_raw.append(row)
 
     def _insert_balance_type(self):
         """assigns the 'withdrawal' or 'balance' to objects in 'self.balances.type'"""
         for item in self.balances:
-            item.order_type = self._get_balance_type(item.amount)
+            item.order_type = TradeData._get_balance_type(item.amount)
 
-    def _parse_balance(self, row: list, date_format: str) -> Balance | None:
+    @staticmethod
+    def _parse_balance(row: list, date_format: str) -> Balance | None:
         """Returns Balance object from a row in MT4 format. Returns None if the row is malformed"""
         try:
             if len(row) > 4:
                 return Balance(
                     order=int(row[0]),
                     date=dt.datetime.strptime(row[1], date_format),
-                    amount=self._balance_to_float(row[4])
+                    amount=TradeData._balance_to_float(row[4])
                 )
             else:
                 logger.warning(f"Skipping malformed trade row (too few columns): {row}")
@@ -322,6 +323,41 @@ class TraderMadeClient:
         self._API_KEI = tm_api_key
         self._set_api_key()
 
+    def complete_trade_high_low(self, trades: list[Trade]):
+        """Completes 'trades.high' and 'trades.low' from a list of trades. Uses tradermade api to complete it
+        'trades.high' is the max value in between 'trade.open_time' and 'trade.close_time'
+        'trades.low' is the min value in between 'trade.open_time' and 'trade.close_time'"""
+        for trade in trades:
+            try:
+                df = self.patched_request(
+                    endpoint='timeseries',
+                    fields=['high', 'low'],
+                    trade=trade
+                )
+
+                if df.empty:
+                    logger.warning(f"No data for trade {trade.order}")
+                    trade.high = max(trade.open_price, trade.close_price)
+                    trade.low = min(trade.open_price, trade.close_price)
+                    continue
+
+                trade.high = max(df['high'].max(), trade.open_price, trade.close_price)
+                trade.low = min(df['low'].min(), trade.open_price, trade.close_price)
+
+            except Exception as e:
+                logger.warning(f"Failed to fetch high/low for trade {trade.order}: {e}")
+
+    def patched_request(self, endpoint: str, fields, **kwargs) -> pd.DataFrame:
+        """Gets data of a trade from the Tradermade API. Tradermade API requests functions raises Keyvalue error
+        when 'quotes' not in response.json(). this patched version accounts for that possibility.
+        trade: a trade of type Trade;
+        fields: any of ['open', 'close', 'high', 'low'];
+        interval= one of ['daily', 'hourly', 'minute']"""
+
+        params = self.build_params(endpoint=endpoint, **kwargs)
+        data = TraderMadeClient._get_request(params, endpoint=endpoint)
+        return TraderMadeClient._parse_response(data, fields=fields)
+
     def _build_historical_params(self, trade: Trade, time_unit: str = 'day') -> dict:
         """Create hour historical request parameters given:
          fields: any of ['open', 'close', 'high', 'low'];
@@ -329,9 +365,9 @@ class TraderMadeClient:
          time_unit: one of ['minute', 'hour', 'day']"""
 
         interval_options = {
-            'minute': self._TM_DATE_FORMAT_MINUTE,
-            'hour': self._TM_DATE_FORMAT_MINUTE,
-            'day': self._TM_DATE_FORMAT_DAILY
+            'minute': TraderMadeClient._TM_DATE_FORMAT_MINUTE,
+            'hour': TraderMadeClient._TM_DATE_FORMAT_MINUTE,
+            'day': TraderMadeClient._TM_DATE_FORMAT_DAILY
         }
 
         return {
@@ -349,18 +385,19 @@ class TraderMadeClient:
                 Minute interval, choices are - 1, 5, 10, 15, 3"""
 
         if not interval:
-            interval = self._optimal_interval(trade)
+            interval = TraderMadeClient._optimal_interval(trade)
 
         if not period:
-            period = self._get_optimal_period(trade.time_opened, interval)
+            period = TraderMadeClient._get_optimal_period(trade.time_opened, interval)
 
-        tm_start_correction = self._start_date_correction(interval, trade.open_time, trade.close_time)
+        tm_start_correction = TraderMadeClient._start_date_correction(interval, trade.open_time, trade.close_time)
 
         params = {
             'currency': trade.symbol,
             'api_key': self.api_key,
-            'start_date': dt.datetime.strftime(trade.open_time + tm_start_correction, self._TM_DATE_FORMAT_MINUTE),
-            'end_date': dt.datetime.strftime(trade.close_time, self._TM_DATE_FORMAT_MINUTE),
+            'start_date': dt.datetime.strftime(trade.open_time + tm_start_correction,
+                                               TraderMadeClient._TM_DATE_FORMAT_MINUTE),
+            'end_date': dt.datetime.strftime(trade.close_time, TraderMadeClient._TM_DATE_FORMAT_MINUTE),
             'interval': interval,
             'period': period,
             'format': 'split'
@@ -389,29 +426,6 @@ class TraderMadeClient:
             raise ValueError(f"Wrong endpoint {endpoint} given.Expected endpoints: "
                              f"['timeseries', 'historical', 'hour_historical', 'minute_historical'] ")
 
-    def _get_request(self, params: dict, endpoint: str) -> dict:
-        """make a request to tradermade.
-         Type must be any of the available functionalities: 'timeseries', 'historical',
-         'minute_historical', 'hourly_historical"""
-
-        request_url = self._BASE_URL + endpoint
-        try:
-            return requests.get(request_url, params).json()
-        except requests.exceptions.RequestException as e:
-            logger.warning(f"Bad request: {e}")
-            return {}
-
-    def patched_request(self, endpoint: str, fields, **kwargs) -> pd.DataFrame:
-        """Gets data of a trade from the Tradermade API. Tradermade API requests functions raises Keyvalue error
-        when 'quotes' not in response.json(). this patched version accounts for that possibility.
-        trade: a trade of type Trade;
-        fields: any of ['open', 'close', 'high', 'low'];
-        interval= one of ['daily', 'hourly', 'minute']"""
-
-        params = self.build_params(endpoint=endpoint, **kwargs)
-        data = self._get_request(params, endpoint=endpoint)
-        return self._parse_response(data, fields=fields)
-
     def _set_api_key(self):
         """Sets the RESTful API, runs on instantiation"""
 
@@ -421,14 +435,28 @@ class TraderMadeClient:
         except Exception as e:
             logger.info(f"Exception while trying to set the restful API {e}")
 
-    def _optimal_interval(self, trade: Trade) -> str:
+    @staticmethod
+    def _get_request(params: dict, endpoint: str) -> dict:
+        """make a request to tradermade.
+         Type must be any of the available functionalities: 'timeseries', 'historical',
+         'minute_historical', 'hourly_historical"""
+
+        request_url = TraderMadeClient._BASE_URL + endpoint
+        try:
+            return requests.get(request_url, params).json()
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Bad request: {e}")
+            return {}
+
+    @staticmethod
+    def _optimal_interval(trade: Trade) -> str:
         """Selects the correct, most optimal interval ('daily', 'hourly', 'minute') to get tm.time_series info
          for a given trade"""
 
         time_opened = trade.time_opened.total_seconds()
         day_in_seconds = 24 * 60 * 60
-        less_than_year_old = self._is_recent_than(trade.open_time, days=365)
-        less_than_month_old = self._is_recent_than(trade.open_time, days=29)
+        less_than_year_old = TraderMadeClient._is_recent_than(trade.open_time, days=365)
+        less_than_month_old = TraderMadeClient._is_recent_than(trade.open_time, days=29)
 
         interval = 'daily'
         if less_than_month_old:
@@ -442,30 +470,6 @@ class TraderMadeClient:
                 interval = 'hourly'
         logger.info(f"{__name__} is less than month old: {less_than_month_old} less than_year_old {less_than_year_old}")
         return interval
-
-    def complete_trade_high_low(self, trades: list[Trade]):
-        """Completes 'trades.high' and 'trades.low' from a list of trades. Uses tradermade api to complete it
-        'trades.high' is the max value in between 'trade.open_time' and 'trade.close_time'
-        'trades.low' is the min value in between 'trade.open_time' and 'trade.close_time'"""
-        for trade in trades:
-            try:
-                df = self.patched_request(
-                    endpoint='timeseries',
-                    fields=['high', 'low'],
-                    trade=trade
-                )
-
-                if df.empty:
-                    logger.warning(f"No data for trade {trade.order}")
-                    trade.high = max(trade.open_price, trade.close_price)
-                    trade.low = min(trade.open_price, trade.close_price)
-                    continue
-
-                trade.high = max(df['high'].max(), trade.open_price, trade.close_price)
-                trade.low = min(df['low'].min(), trade.open_price, trade.close_price)
-
-            except Exception as e:
-                logger.warning(f"Failed to fetch high/low for trade {trade.order}: {e}")
 
     @staticmethod
     def _get_optimal_period(time_opened: dt.timedelta, interval: str) -> int:
