@@ -37,7 +37,6 @@ class Metrics:
         # self.t_efficiency = divide(self.t_net_income, self.max_income_possible)
         # self.act_count_df = self.act_count()
         # self.most_traded = self.get_most_traded()
-        print(self.df.to_string())
 
     @property
     def n_trades_won(self) -> float:
@@ -103,7 +102,7 @@ class Metrics:
         self.df['day_of_week'] = [self.dow[date.weekday()] for date in self.df.close_time]
         self.df['won_trade'] = (self.df.profit > 0)
         self.df.symbol = self.df.symbol.astype('category')
-        self.df.type = self.df.symbol.astype('category')
+        self.df.order_type = self.df.symbol.astype('category')
 
     def get_max_gain(self, row: pd.Series, max_loss: bool = False) -> float:
         """gets max gain possible gain for a trade, taking into account whether it's a buy or a sell trade.
@@ -114,9 +113,9 @@ class Metrics:
         if max_loss:
             limits.reverse()
         gain = - 10 ** 100
-        if row.type == 'buy':
+        if row.order_type == 'buy':
             gain = self.get_trade_profit(row, limits[0])
-        elif row.type == 'sell':
+        elif row.order_type == 'sell':
             gain = -self.get_trade_profit(row, limits[1])
 
         if self._max_is_less_than_actual(gain, row.profit, max_loss):
@@ -168,6 +167,7 @@ class Metrics:
 
 
 my_metrics = Metrics(test_trade_data)
+print(my_metrics.df.to_string())
 
 for attr_name in dir(my_metrics.__class__):
     attr = getattr(my_metrics.__class__, attr_name)
