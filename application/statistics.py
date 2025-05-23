@@ -1,7 +1,8 @@
 from application.mt4data import Trade, TradeData, Balance  # noqa: F401
+from application.config import get_logger
+from dataclasses import fields
 import pandas as pd
 import pickle
-from application.config import get_logger
 
 with open("cached_trade_data.pkl", "rb") as f:
     test_trade_data = pickle.load(f)
@@ -35,10 +36,16 @@ class Metrics:
     def __init__(self, trade_data: TradeData):
         self._currency = trade_data.currency
         trade_dicts = [trade.__dict__ for trade in trade_data.forex_trades]
-        self.df = pd.DataFrame()
-        self.df.convert_dtypes()
-        self.sort_df_values(by='open_time')
-        self._complete_dataframe()
+        self.df = pd.DataFrame(trade_dicts)
+        if not self.df.empty:
+            self.df.convert_dtypes()
+            self.sort_df_values(by='open_time')
+            self._complete_dataframe()
+        else:
+            keys = [field.name for field in fields(Trade)]\
+                   + ['won_trade', 'max_possible_gain', 'max_possible_loss', 'accumulative_profit', 'day']
+            self.df = pd.DataFrame(columns=keys)
+            print(self.df.to_string())
 
         # self.mom_grow_seriesth = 0
         # self.max_run_up = round(self.get_runup())
@@ -96,7 +103,10 @@ class Metrics:
 
     @property
     def most_traded(self) -> str:
-        return self.df.symbol.mode()[0]
+        try:
+            return self.df.symbol.mode()[0]
+        except KeyError:
+            return ''
 
     @property
     def get_n_of_trades(self) -> int:
@@ -122,7 +132,7 @@ class Metrics:
         self.df['max_possible_gain'] = self.df.apply(self.get_max_gain, axis='columns')
         self.df['max_possible_loss'] = self.df.apply(lambda row: round(self.get_max_gain(row, True), 2), axis='columns')
         self.df['accumulative_profit'] = self.df.profit.cumsum()
-        self.df['day_of_week'] = [self.dow[date.weekday()] for date in self.df.close_time]
+        self.df['day'] = [self.dow[date.weekday()] for date in self.df.close_time]
         self.df['won_trade'] = (self.df.profit > 0)
         self.df.symbol = self.df.symbol.astype('category')
         self.df.order_type = self.df.symbol.astype('category')
