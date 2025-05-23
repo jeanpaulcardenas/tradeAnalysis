@@ -9,8 +9,19 @@ with open("cached_trade_data.pkl", "rb") as f:
 logger = get_logger(__name__)
 
 
+def zero_division_to_zero(func):
+    def wrapper(self):
+        try:
+            return func(self)
+        except ZeroDivisionError:
+            logger.warning(f"{__name__} {func.__class__} zero division error! returned 0 instead. ")
+            return 0
+    return wrapper
+
+
 class Metrics:
     tip = ['buy', 'sell']
+
     dow = {
         0: 'monday',
         1: 'tuesday',
@@ -24,9 +35,8 @@ class Metrics:
     def __init__(self, trade_data: TradeData):
         self._currency = trade_data.currency
         trade_dicts = [trade.__dict__ for trade in trade_data.forex_trades]
-        self.df = pd.DataFrame(trade_dicts)
+        self.df = pd.DataFrame()
         self.df.convert_dtypes()
-        self._n_of_trades = self.get_n_of_trades()
         self.sort_df_values(by='open_time')
         self._complete_dataframe()
 
@@ -47,8 +57,9 @@ class Metrics:
         return (self.df.won_trade == 0).sum()
 
     @property
+    @zero_division_to_zero
     def trades_win_rate(self) -> float:
-        return self.n_trades_won/self.n_trades_loss
+        return self.n_trades_won/self.n_of_trades
 
     @property
     def gross_revenue(self) -> float:
@@ -63,10 +74,12 @@ class Metrics:
         return self.gross_revenue + self.gross_loss
 
     @property
+    @zero_division_to_zero
     def avg_trade_profit(self) -> float:
         return self.net_income/self.n_of_trades
 
     @property
+    @zero_division_to_zero
     def profit_factor(self) -> float:
         """profit factor: gross loss / gross gross_revenue"""
         return self.gross_revenue/self.gross_loss
@@ -77,6 +90,7 @@ class Metrics:
         return self.df.max_possible_gain.sum()
 
     @property
+    @zero_division_to_zero
     def efficiency(self) -> float:
         return self.gross_revenue/self.perfect_efficiency_income
 
@@ -84,12 +98,21 @@ class Metrics:
     def most_traded(self) -> str:
         return self.df.symbol.mode()[0]
 
+    @property
+    def get_n_of_trades(self) -> int:
+        return self.df.shape[0]
+
+    @property
+    def n_of_trades(self) -> int:
+        return self.df.shape[0]
+
+    @property
+    def currency(self) -> str:
+        return self._currency
+
     def sort_df_values(self, by):
         """sorts dataframe by values 'by'. 'by' must be any of the available column names"""
         self.df.sort_values(by=by, inplace=True, ignore_index=True)
-
-    def get_n_of_trades(self) -> int:
-        return self.df.shape[0]
 
     def _complete_dataframe(self):
         """Add key columns to the dataframe for analysis.
@@ -156,14 +179,6 @@ class Metrics:
             return round(maxim, 2) > round(actual, 2)
         else:
             return round(maxim, 2) < round(actual, 2)
-
-    @property
-    def n_of_trades(self) -> int:
-        return self.df.shape[0]
-
-    @property
-    def currency(self) -> str:
-        return self._currency
 
 
 my_metrics = Metrics(test_trade_data)
