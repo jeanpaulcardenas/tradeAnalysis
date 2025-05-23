@@ -1,10 +1,9 @@
 import logging
 
-
 DEBUG = False
 
 
-def get_logger(name:str) -> logging.Logger:
+def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     if not logger.handlers:
         logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
