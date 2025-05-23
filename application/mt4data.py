@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 class Trade:
     order: int
     open_time: dt.datetime
-    type: str
+    order_type: str
     volume: float
     symbol: str
     open_price: float
@@ -42,7 +42,7 @@ class Balance:
     order: int
     date: datetime
     amount: float
-    type: str = ''
+    balance_type: str = ''
 
 
 class TxtParser:
@@ -204,7 +204,7 @@ class TradeData:
     def _insert_balance_type(self):
         """assigns the 'withdrawal' or 'balance' to objects in 'self.balances.type'"""
         for item in self.balances:
-            item.type = self._get_balance_type(item.amount)
+            item.order_type = self._get_balance_type(item.amount)
 
     def _parse_balance(self, row: list, date_format: str) -> Balance | None:
         """Returns Balance object from a row in MT4 format. Returns None if the row is malformed"""
@@ -240,7 +240,7 @@ class TradeData:
                 return Trade(
                     order=int(row[0]),
                     open_time=dt.datetime.strptime(row[1], date_format),
-                    type=row[2],
+                    order_type=row[2],
                     volume=float(row[3]),
                     symbol=row[4].upper(),
                     open_price=float(row[5]),
