@@ -1,6 +1,7 @@
 from application.mt4data import Trade, TradeData, Balance  # noqa: F401
 from application.config import get_logger
 from dataclasses import fields
+from constants import CURRENCIES
 import pandas as pd
 import pickle
 
@@ -48,6 +49,24 @@ class Metrics:
             print(self.df.to_string())
 
     @property
+    def currency(self) -> str:
+        """Returns account currency as string."""
+        return self._currency
+
+    @property
+    def currency_symbol(self):
+        """Returns account currency symbol"""
+        try:
+            return CURRENCIES[self.currency]
+        except KeyError:
+            return CURRENCIES['USD']
+
+    @property
+    def n_of_trades(self) -> int:
+        """Returns total number of trades."""
+        return self.df.shape[0]
+
+    @property
     def n_trades_won(self) -> float:
         """Counts the number of winning trades"""
         return self.df.won_trade.sum()
@@ -60,22 +79,22 @@ class Metrics:
     @property
     @zero_division_to_zero
     def win_rate(self) -> float:
-        """trades won / number of trades"""
+        """Trades won / number of trades"""
         return self.n_trades_won/self.n_of_trades
 
     @property
     def gross_revenue(self) -> float:
-        """sum of all wining trades profit"""
+        """Sum of all wining trades profit"""
         return self.df.profit[self.df['won_trade']].sum()
 
     @property
     def gross_loss(self) -> float:
-        """sum of all losing trades loss"""
+        """Sum of all losing trades loss"""
         return self.df.profit[self.df.won_trade == 0].sum()
 
     @property
     def net_income(self) -> float:
-        """returns the sum of all profits. (loss - earnings)"""
+        """Returns the sum of all profits. (loss - earnings)"""
         return self.gross_revenue + self.gross_loss
 
     @property
@@ -87,71 +106,63 @@ class Metrics:
     @property
     @zero_division_to_zero
     def avg_win_trade_profit(self) -> float:
-        """average winning trade profit"""
+        """Average winning trade profit"""
         return self.gross_revenue/self.n_trades_won
 
     @property
     @zero_division_to_zero
     def avg_lose_trade_loss(self) -> float:
-        """average losing trade loss"""
+        """Average losing trade loss"""
         return self.gross_loss/self.n_trades_loss
 
     @property
     def avg_win_over_loss(self) -> float:
-        """ratio between the average won trade profit to the average losing trade loss """
+        """Ratio between the average won trade profit to the average losing trade loss """
         return self.avg_win_trade_profit/self.avg_lose_trade_loss
 
     @property
     @zero_division_to_zero
     def profit_factor(self) -> float:
-        """profit factor: gross loss / gross gross_revenue"""
+        """Profit factor: gross loss / gross gross_revenue"""
         return self.gross_revenue/self.gross_loss
 
     @property
     def perfect_efficiency_income(self) -> float:
-        """profit if closed trade at best possible moment in between close time and open time"""
+        """Profit if closed trade at best possible moment in between close time and open time"""
         return self.df.max_possible_gain.sum()
 
     @property
     @zero_division_to_zero
     def efficiency(self) -> float:
-        """returns the ratio between the obtained revenue (only winning trades) to the 'perfect possible income'
+        """Returns the ratio between the obtained revenue (only winning trades) to the 'perfect possible income'
         it's: gross_revenue/perfect_efficiency_income"""
         return self.gross_revenue/self.perfect_efficiency_income
 
     @property
     def most_traded(self) -> str:
-        """returns the symbol of the most traded pair"""
+        """Returns the symbol of the most traded pair"""
         try:
             return self.df.symbol.mode()[0]
         except KeyError:
             return ''
 
     @property
-    def n_of_trades(self) -> int:
-        return self.df.shape[0]
-
-    @property
-    def currency(self) -> str:
-        return self._currency
-
-    @property
-    def consecutive_wins(self):
+    def consecutive_wins(self) -> int:
         return self._max_consecutive_streak(True)
 
     @property
-    def consecutive_losses(self):
+    def consecutive_losses(self) -> int:
         return self._max_consecutive_streak(False)
 
     @property
-    def largest_earning_trade(self):
+    def largest_earning_trade(self) -> float:
         return self.df.profit.max()
 
     @property
-    def largest_loss_trade(self):
+    def largest_loss_trade(self) -> float:
         return self.df.profit.min()
 
-    def get_max_run_up(self):
+    def get_max_run_up(self) -> float:
         """returns the value of the max run up """
         accumulative_profit = self.df.accum.to_list()
         min_val = 0
@@ -167,19 +178,6 @@ class Metrics:
         """sorts dataframe by values 'by'. 'by' must be any of the available column names"""
         self.df.sort_values(by=by, inplace=True, ignore_index=True)
 
-    def _max_consecutive_streak(self, condition: bool = True):
-        """Returns the maximum consecutive streak of trades where won_trade == condition"""
-        max_streak = 0
-        streak = 0
-        for val in self.df.won_trade:
-            if val == condition:
-                streak += 1
-                if streak > max_streak:
-                    max_streak = streak
-            else:
-                streak = 0
-        return max_streak
-
     def _complete_dataframe(self):
         """Add key columns to the dataframe for analysis.
 
@@ -194,6 +192,19 @@ class Metrics:
         self.df['pips'] = self.df.apply(Metrics._get_pips, axis='columns')
         self.df.symbol = self.df.symbol.astype('category')
         self.df.order_type = self.df.symbol.astype('category')
+
+    def _max_consecutive_streak(self, condition: bool = True) -> int:
+        """Returns the maximum consecutive streak of trades where won_trade == condition"""
+        max_streak = 0
+        streak = 0
+        for val in self.df.won_trade:
+            if val == condition:
+                streak += 1
+                if streak > max_streak:
+                    max_streak = streak
+            else:
+                streak = 0
+        return max_streak
 
     def _get_max_gain(self, row: pd.Series, max_loss: bool = False) -> float:
         """gets max gain possible gain for a trade, taking into account whether it's a buy or a sell trade.
@@ -240,6 +251,7 @@ class Metrics:
 
     @staticmethod
     def _get_pips(row: pd.Series):
+        """Get pips as 0.0001 pair value difference. for JPY pair's it's 0.01."""
         diff = row.close_price - row.open_price
         if 'JPY' in row.symbol:
             return 100 * diff

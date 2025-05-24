@@ -1,21 +1,28 @@
+import os
+
 MONTHS = {
-    "01": "enero",
-    "02": "febrero",
-    "03": "marzo",
-    "04": "abril",
-    "05": "mayo",
-    "06": "junio",
-    "07": "julio",
-    "08": "agosto",
-    "09": "septiembre",
-    "10": "octubre",
-    "11": "noviembre",
-    "12": "diciembre",
+    '01': 'enero',
+    '02': 'febrero',
+    '03': 'marzo',
+    '04': 'abril',
+    '05': 'mayo',
+    '06': 'junio',
+    '07': 'julio',
+    '08': 'agosto',
+    '09': 'septiembre',
+    '10': 'octubre',
+    '11': 'noviembre',
+    '12': 'diciembre',
 }
 
 CURRENCIES = {
-    "EUR": "€",
-    "USD": "$"
+    'EUR': '€',
+    'USD': '$',
+    'AUD': '$',
+    'CAD': '$',
+    'NZD': '$',
+    'GBP': '£',
+    'JPY': '¥',
 }
 
 PAIRS = {
@@ -73,19 +80,19 @@ PAIRS = {
     'ZAR':	'South African Rand'
 }
 
-TM_API_KEY = "9O0-46sUHnM08AGxuDcz"  # Tradermade API key
+TM_API_KEY = '9O0-46sUHnM08AGxuDcz'  # Tradermade API key
 
 COLORS = {
-    "blue": "rgb(0,80,250)",
-    "red": "rgb(250, 0, 0)",
-    "white": "rgb(255, 255, 255)",
-    "green": "rgb(0, 250, 0)",
-    "yellow": "rgb(255,255,10)",
-    "purple": "rgb(110, 0, 255)",
-    "orange": "rgb(220,125,15)",
-    "dark_red": "rgb(120,30,30)",
-    "lightblue": "rgb(45,250,250)",
-    "pink": "rgb(250,90,255)"
+    'blue': 'rgb(0,80,250)',
+    'red': 'rgb(250, 0, 0)',
+    'white': 'rgb(255, 255, 255)',
+    'green': 'rgb(0, 250, 0)',
+    'yellow': 'rgb(255,255,10)',
+    'purple': 'rgb(110, 0, 255)',
+    'orange': 'rgb(220,125,15)',
+    'dark_red': 'rgb(120,30,30)',
+    'lightblue': 'rgb(45,250,250)',
+    'pink': 'rgb(250,90,255)'
 }
 
 
