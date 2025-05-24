@@ -2,10 +2,11 @@ from application.mt4data import Trade, TradeData, Balance  # noqa: F401
 from application.config import get_logger
 from dataclasses import fields
 from constants import CURRENCIES
+import numpy as np
 import pandas as pd
 import pickle
 
-with open("cached_trade_data.pkl", "rb") as f:
+with open('cached_trade_data.pkl', 'rb') as f:
     test_trade_data = pickle.load(f)
 
 logger = get_logger(__name__)
@@ -18,6 +19,7 @@ def zero_division_to_zero(func):
         except ZeroDivisionError:
             logger.warning(f"{__name__} {func.__class__} zero division error! returned 0 instead. ")
             return 0
+
     return wrapper
 
 
@@ -37,14 +39,16 @@ class Metrics:
     def __init__(self, trade_data: TradeData):
         self._currency = trade_data.currency
         trade_dicts = [trade.__dict__ for trade in trade_data.forex_trades]
+        self._df_is_completed = False
         self.df = pd.DataFrame(trade_dicts)
         if not self.df.empty:
             self.df.convert_dtypes()
             self.sort_df_values(by='open_time')
             self._complete_dataframe()
         else:
-            keys = [field.name for field in fields(Trade)]\
-                 + ['won_trade', 'max_possible_gain', 'max_possible_loss', 'accumulative_profit', 'day of week', 'pip']
+            keys = [field.name for field in fields(Trade)] \
+                   + ['won_trade', 'max_possible_gain', 'max_possible_loss', 'accumulative_profit', 'day of week',
+                      'pip']
             self.df = pd.DataFrame(columns=keys)
             print(self.df.to_string())
 
@@ -80,7 +84,7 @@ class Metrics:
     @zero_division_to_zero
     def win_rate(self) -> float:
         """Trades won / number of trades"""
-        return self.n_trades_won/self.n_of_trades
+        return self.n_trades_won / self.n_of_trades
 
     @property
     def gross_revenue(self) -> float:
@@ -101,30 +105,30 @@ class Metrics:
     @zero_division_to_zero
     def expectancy(self) -> float:
         """	Shows average expected outcome per trade — excellent for evaluation."""
-        return self.net_income/self.n_of_trades
+        return self.net_income / self.n_of_trades
 
     @property
     @zero_division_to_zero
     def avg_win_trade_profit(self) -> float:
         """Average winning trade profit"""
-        return self.gross_revenue/self.n_trades_won
+        return self.gross_revenue / self.n_trades_won
 
     @property
     @zero_division_to_zero
     def avg_lose_trade_loss(self) -> float:
         """Average losing trade loss"""
-        return self.gross_loss/self.n_trades_loss
+        return self.gross_loss / self.n_trades_loss
 
     @property
     def avg_win_over_loss(self) -> float:
         """Ratio between the average won trade profit to the average losing trade loss """
-        return self.avg_win_trade_profit/self.avg_lose_trade_loss
+        return self.avg_win_trade_profit / self.avg_lose_trade_loss
 
     @property
     @zero_division_to_zero
     def profit_factor(self) -> float:
         """Profit factor: gross loss / gross gross_revenue"""
-        return self.gross_revenue/self.gross_loss
+        return self.gross_revenue / self.gross_loss
 
     @property
     def perfect_efficiency_income(self) -> float:
@@ -136,7 +140,7 @@ class Metrics:
     def efficiency(self) -> float:
         """Returns the ratio between the obtained revenue (only winning trades) to the 'perfect possible income'
         it's: gross_revenue/perfect_efficiency_income"""
-        return self.gross_revenue/self.perfect_efficiency_income
+        return self.gross_revenue / self.perfect_efficiency_income
 
     @property
     def most_traded(self) -> str:
@@ -148,21 +152,33 @@ class Metrics:
 
     @property
     def consecutive_wins(self) -> int:
+        """Returns max number of consecutive wins"""
         return self._max_consecutive_streak(True)
 
     @property
     def consecutive_losses(self) -> int:
+        """Returns count of max consecutive losses"""
         return self._max_consecutive_streak(False)
 
     @property
     def largest_earning_trade(self) -> float:
+        """Returns largest profit trade amount"""
         return self.df.profit.max()
 
     @property
     def largest_loss_trade(self) -> float:
+        """Returns largest lose trade amount"""
         return self.df.profit.min()
 
-    def get_max_run_up(self) -> float:
+    @property
+    def std_profit(self) -> float:
+        """Returns standard deviation of profit column"""
+        if self.n_of_trades < 2:
+            return 0
+        else:
+            return self.df.profit.std()
+
+    def get_max_run_up(self, reverse=False) -> float:
         """returns the value of the max run up """
         accumulative_profit = self.df.accum.to_list()
         min_val = 0
@@ -250,6 +266,30 @@ class Metrics:
             return row.profit
 
     @staticmethod
+    def bootstrap_confidence_interval_mean(
+            data: pd.Series, n_iterations: int = 10000, ci: int = 95) -> (float, float, str):
+        """Returns a Confidence Interval of ci= percentage of the ci, statistic = numpy function (np.mean, np.std)
+        and n_iterations"""
+        msg = 'This 95% CI is based on historical trade outcomes. Future results may differ.'
+        if n_iterations < 1 or 1 > ci > 100 or not (isinstance(data[0], float) or isinstance(data[0], int)):
+            logger.warning(f"{__name__} {__class__} can't run _bootstrap_confidence_interval_mean function with"
+                           f"params: iterations={n_iterations}, ci={ci}")
+            return 0, 0, ''
+        data = np.asarray(data)
+        size = data.size
+        if size < 2:
+            msg = 'insufficient amount of trades to calculate confidence intervals'
+            return 0, 0, msg
+        if size < 30:
+            msg = 'bootstrap CI sample less than 30! result not very meaningful'
+            logger.info(f"{__name__} {__class__} {msg}")
+        samples = np.random.choice(data, size=(n_iterations, data.size), replace=True)
+        stats = np.apply_along_axis(np.mean, axis=1, arr=samples)
+        lower = np.percentile(stats, (100 - ci) / 2)
+        upper = np.percentile(stats, 100 - (100 - ci) / 2)
+        return lower, upper, msg
+
+    @staticmethod
     def _get_pips(row: pd.Series):
         """Get pips as 0.0001 pair value difference. for JPY pair's it's 0.01."""
         diff = row.close_price - row.open_price
@@ -271,6 +311,7 @@ class Metrics:
 
 my_metrics = Metrics(test_trade_data)
 print(my_metrics.df.to_string())
+print(my_metrics.bootstrap_confidence_interval_mean(my_metrics.df.profit[my_metrics.df.won_trade]))
 
 for attr_name in dir(my_metrics.__class__):
     attr = getattr(my_metrics.__class__, attr_name)
