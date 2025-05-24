@@ -178,12 +178,20 @@ class Metrics:
         else:
             return self.df.profit.std()
 
-    def get_max_run_up(self, reverse=False) -> float:
-        """returns the value of the max run up """
-        accumulative_profit = self.df.accum.to_list()
+    @property
+    def max_runup(self):
+        return self.get_max_run()
+
+    @property
+    def max_drawdown(self):
+        return - self.get_max_run(drawdown=True)
+
+    def get_max_run(self, drawdown=False) -> float:
+        """Returns the value of the max run up of profit colum.  For drawdown = False get max drawdown"""
+        cum_profit = (-1) ** drawdown * self.df.cum_profit
         min_val = 0
         max_runup = 0
-        for val in accumulative_profit:
+        for val in cum_profit:
             if val < min_val:
                 min_val = val
             elif val - min_val > max_runup:
@@ -202,12 +210,12 @@ class Metrics:
         self.df['max_possible_gain'] = self.df.apply(func=self._get_max_gain, axis='columns')
         self.df['max_possible_loss'] = self.df.apply(func=lambda row: round(self._get_max_gain(row, True), 2),
                                                      axis='columns')
-        self.df['accumulative_profit'] = self.df.profit.cumsum()
+        self.df['cum_profit'] = self.df.profit.cumsum()
         self.df['day_of_week'] = self.df.close_time.apply(func=lambda date: Metrics.dow[date.weekday()])
         self.df['won_trade'] = (self.df.profit > 0)
         self.df['pips'] = self.df.apply(Metrics._get_pips, axis='columns')
         self.df.symbol = self.df.symbol.astype('category')
-        self.df.order_type = self.df.symbol.astype('category')
+        self.df.order_type = self.df.order_type.astype('category')
 
     def _max_consecutive_streak(self, condition: bool = True) -> int:
         """Returns the maximum consecutive streak of trades where won_trade == condition"""
@@ -292,11 +300,14 @@ class Metrics:
     @staticmethod
     def _get_pips(row: pd.Series):
         """Get pips as 0.0001 pair value difference. for JPY pair's it's 0.01."""
-        diff = row.close_price - row.open_price
+        diff = abs(row.close_price - row.open_price)
+        sign = 1
+        if isinstance(row.won_trade, bool):
+            sign = (-1) ** (row.won_trade + 1)
         if 'JPY' in row.symbol:
-            return 100 * diff
+            return sign * 100 * diff
         else:
-            return 10 ** 4 * diff
+            return sign * 10 ** 4 * diff
 
     @staticmethod
     def _max_is_less_than_actual(maxim: float, actual: float, reverse: bool = False) -> bool:
