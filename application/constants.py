@@ -1,5 +1,8 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
+TM_API_KEY = os.getenv('TM_API_KEY')  # Tradermade API key
 MONTHS = {
     '01': 'enero',
     '02': 'febrero',
@@ -80,7 +83,6 @@ PAIRS = {
     'ZAR':	'South African Rand'
 }
 
-TM_API_KEY = '9O0-46sUHnM08AGxuDcz'  # Tradermade API key
 
 COLORS = {
     'blue': 'rgb(0,80,250)',
