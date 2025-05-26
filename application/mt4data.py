@@ -70,7 +70,7 @@ class TxtParser:
         return operations_info
 
     def get_account_info(self) -> dict:
-        """returns number account, name, currency and leverage from MT4 report"""
+        """returns account, name, currency and leverage from MT4 report"""
 
         acct_info_raw = TxtParser._extract_section_from_html_list(
             my_list=self.my_html_list,
