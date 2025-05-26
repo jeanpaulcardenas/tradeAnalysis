@@ -82,6 +82,7 @@ class IncomeGraph:
                 showlegend=False,
 
             )
+        return fig
 
 # def income_graph(start, end, choice, b_time_period, style):
 #     d = GaFiltered(df[(df["ff"] >= start) & (df["ff"] <= end)].copy(), "eur")
