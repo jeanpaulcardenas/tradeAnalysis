@@ -24,8 +24,6 @@ def zero_division_to_zero(func):
 
 
 class Metrics:
-    tip = ['buy', 'sell']
-
     dow = {
         0: 'monday',
         1: 'tuesday',
@@ -36,11 +34,10 @@ class Metrics:
         6: 'sunday'
     }
 
-    def __init__(self, trade_data: TradeData):
-        self._currency = trade_data.currency
-        trade_dicts = [trade.__dict__ for trade in trade_data.forex_trades]
-        self._df_is_completed = False
-        self.df = pd.DataFrame(trade_dicts)
+    def __init__(self, trades_df: pd.DataFrame, balance_df: pd.DataFrame, currency):
+        self.df = trades_df
+        self.balance_df = balance_df
+        self._currency = currency
         if not self.df.empty:
             self.df.convert_dtypes()
             self.sort_df_values(by='open_time')
@@ -51,6 +48,17 @@ class Metrics:
                       'pip']
             self.df = pd.DataFrame(columns=keys)
             print(self.df.to_string())
+
+    @classmethod
+    def from_trade_data(cls, trade_data: TradeData):
+        """Creates a Metrics object from a df created from a dataframe with all columns of self.df existing.
+        Intended to create objects from self.df themselves"""
+        currency = trade_data.currency
+        trade_dict = [trade.__dict__ for trade in trade_data.forex_trades]
+        df = pd.DataFrame(trade_dict)
+        balance_dict = [balance.__dict__ for balance in trade_data.balances]
+        balance_df = pd.DataFrame(balance_dict)
+        return cls(df, balance_df, currency)
 
     @property
     def currency(self) -> str:
@@ -216,6 +224,7 @@ class Metrics:
         self.df['pips'] = self.df.apply(Metrics._get_pips, axis='columns')
         self.df.symbol = self.df.symbol.astype('category')
         self.df.order_type = self.df.order_type.astype('category')
+        self.df.day_of_week = self.df.day_of_week.astype('category')
 
     def _max_consecutive_streak(self, condition: bool = True) -> int:
         """Returns the maximum consecutive streak of trades where won_trade == condition"""
@@ -320,7 +329,7 @@ class Metrics:
             return round(maxim, 2) < round(actual, 2)
 
 
-my_metrics = Metrics(test_trade_data)
+my_metrics = Metrics.from_trade_data(test_trade_data)
 print(my_metrics.df.to_string())
 print(my_metrics.bootstrap_confidence_interval_mean(my_metrics.df.profit[my_metrics.df.won_trade]))
 
@@ -328,3 +337,4 @@ for attr_name in dir(my_metrics.__class__):
     attr = getattr(my_metrics.__class__, attr_name)
     if isinstance(attr, property):
         print(f"{attr_name}: {getattr(my_metrics, attr_name)}")
+
