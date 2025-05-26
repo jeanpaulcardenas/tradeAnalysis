@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TM_API_KEY = os.getenv('TM_API_KEY')  # Tradermade API key
+
+order_types = {'buy', 'sell'}
+
 MONTHS = {
     '01': 'enero',
     '02': 'febrero',
