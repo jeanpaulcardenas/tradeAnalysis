@@ -100,4 +100,10 @@ COLORS = {
     'pink': 'rgb(250,90,255)'
 }
 
+COLUMN_USED = {
+    'All': None,
+    'Buy vs Sell': 'order_types',
+    'Pair': 'symbol',
+    'Day of week': 'day_of_week',
+}
 
