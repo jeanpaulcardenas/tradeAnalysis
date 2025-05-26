@@ -1,13 +1,14 @@
 from application.mt4data import Trade, TradeData, Balance  # noqa: F401
 from application.config import get_logger
 from dataclasses import fields
-from constants import CURRENCIES
+from application.constants import CURRENCIES
 import numpy as np
 import pandas as pd
 import pickle
 
-with open('cached_trade_data.pkl', 'rb') as f:
-    test_trade_data = pickle.load(f)
+if __name__ == '__main__':
+    with open('cached_trade_data.pkl', 'rb') as f:
+        test_trade_data = pickle.load(f)
 
 logger = get_logger(__name__)
 
@@ -329,12 +330,13 @@ class Metrics:
             return round(maxim, 2) < round(actual, 2)
 
 
-my_metrics = Metrics.from_trade_data(test_trade_data)
-print(my_metrics.df.to_string())
-print(my_metrics.bootstrap_confidence_interval_mean(my_metrics.df.profit[my_metrics.df.won_trade]))
+if __name__ == '__main__':
+    my_metrics = Metrics.from_trade_data(test_trade_data)
+    print(my_metrics.df.to_string())
+    print(my_metrics.bootstrap_confidence_interval_mean(my_metrics.df.profit[my_metrics.df.won_trade]))
 
-for attr_name in dir(my_metrics.__class__):
-    attr = getattr(my_metrics.__class__, attr_name)
-    if isinstance(attr, property):
-        print(f"{attr_name}: {getattr(my_metrics, attr_name)}")
+    for attr_name in dir(my_metrics.__class__):
+        attr = getattr(my_metrics.__class__, attr_name)
+        if isinstance(attr, property):
+            print(f"{attr_name}: {getattr(my_metrics, attr_name)}")
 
