@@ -102,8 +102,8 @@ COLORS = {
 
 COLUMN_USED = {
     'All': None,
-    'Buy vs Sell': 'order_types',
-    'Pair': 'symbol',
+    'Buy vs Sell': 'order_type',
+    'Pairs': 'symbol',
     'Day of week': 'day_of_week',
 }
 
