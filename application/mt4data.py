@@ -257,7 +257,7 @@ class TradeData:
     def _is_trade(row):
         """returns True if a list contains a trade's information"""
 
-        return row[2].lower() in {'buy', 'sell'} if len(row) > 2 else False
+        return row[2].lower() in order_types if len(row) > 2 else False
 
     @staticmethod
     def _is_balance(row):
