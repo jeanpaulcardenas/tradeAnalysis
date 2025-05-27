@@ -35,10 +35,10 @@ class Metrics:
         6: 'sunday'
     }
 
-    def __init__(self, trades_df: pd.DataFrame, balance_df: pd.DataFrame, currency):
+    def __init__(self, trades_df: pd.DataFrame, balance_df: pd.DataFrame, currency: str):
         self.df = trades_df
         self.balance_df = balance_df
-        self._currency = currency
+        self._currency = currency.upper()
         if not self.df.empty:
             self.df.convert_dtypes()
             self.sort_df_values(by='open_time')
@@ -48,7 +48,7 @@ class Metrics:
                    + ['won_trade', 'max_possible_gain', 'max_possible_loss', 'accumulative_profit', 'day of week',
                       'pip']
             self.df = pd.DataFrame(columns=keys)
-            print(self.df.to_string())
+        print(self.df.to_string())
 
     @classmethod
     def from_trade_data(cls, trade_data: TradeData):
@@ -278,7 +278,7 @@ class Metrics:
                 logger.warning(f"in trade {row.order} open and close prices are equal: {row.open_price},"
                                f" unable to calculate max possible nor min possible be rule of three")
                 return row.profit
-            return abs(row.profit) * (final_value - row.open_price) / (row.close_price - row.open_price)
+            return abs(row.profit) * (final_value - row.open_price) / abs(row.close_price - row.open_price)
 
         else:
             return row.profit
@@ -339,4 +339,3 @@ if __name__ == '__main__':
         attr = getattr(my_metrics.__class__, attr_name)
         if isinstance(attr, property):
             print(f"{attr_name}: {getattr(my_metrics, attr_name)}")
-
