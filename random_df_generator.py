@@ -28,16 +28,19 @@ class RandDataGen:
         self.update_data()
         self._df = pd.DataFrame(self.data_dict)
 
-    def rand_init_data(self):
+    def rand_init_data(self) -> dict:
+        """Create a dict with simulated data for 'symbol' 'volume' 'order_type' 'open_time' keys."""
         data = {
             'symbol': [random.choice(PAIRS) for _ in range(self.n_trades)],
-            'volume': [int(round(random.randint(1, 10) / 10)) for _ in range(self.n_trades)],
+            'volume': [round(random.randint(1, 10) / 10, 2) for _ in range(self.n_trades)],
             'order_type': [random.choice(options) for _ in range(self.n_trades)],
             'open_time': [RandDataGen.random_future(start, 54) for _ in range(self.n_trades)]
         }
         return data
 
     def _add_profits_to_dict(self):
+        """Add 'profit' key and it's values to 'self.dict'. For pairs that don't contain the account
+        currency the profit value is calculated as if the base currency was the account currency (very inaccurate)."""
         open_price, close_price, vol, symbol = [self.data_dict[key_string]
                                                 for key_string in ['open_price', 'close_price', 'volume', 'symbol']]
         lot = 10 ** 5
@@ -53,6 +56,8 @@ class RandDataGen:
         self.data_dict['profit'] = profits
 
     def update_data(self):
+        """Updates dict with 'order', 'close_time', 'close_price', 'high', 'low', 'profit', 'sl', 'tp',
+        'commission', 'taxes', 'swap'"""
         zeros_list = [0 for _ in range(self.n_trades)]
         self.data_dict['order'] = [1000 + i for i in range(self.n_trades)]
         self.data_dict['close_time'] = [RandDataGen.random_future(open_time, 16)
@@ -75,41 +80,50 @@ class RandDataGen:
         self.data_dict['swap'] = zeros_list
 
     @staticmethod
-    def _random_pair_price(pair):
-        return round(random.uniform(PAIRS_RANGE_VAL[pair][0], PAIRS_RANGE_VAL[pair][1]))
+    def _random_pair_price(pair: str) -> float:
+        """Returns a price from a symbol within the real max and min values for a given pair."""
+        return round(random.uniform(PAIRS_RANGE_VAL[pair][0], PAIRS_RANGE_VAL[pair][1]), 5)
 
     @staticmethod
-    def is_weekend(date):
+    def is_weekend(date: dt.datetime) -> bool:
+        """checks weather a date is weekend or not. Returns true if date day is weekend"""
         return date.weekday() in [5, 6]
 
     @staticmethod
-    def random_future(first, max_weeks) -> dt.datetime:
+    def random_future(first: dt.datetime, max_weeks: int) -> dt.datetime:
+        """Returns a date from first to max_weeks to the future"""
         week_day = True
         date = dt.datetime.now()
         while week_day:
             val = dt.timedelta(
-                weeks=random.randint(0, max_weeks),
+                weeks=random.randint(0, max_weeks - 1),
                 days=random.randint(0, 6),
                 hours=random.randint(0, 23),
                 seconds=random.randint(0, 3599))
             date = first + val
-            week_day = RandDataGen.is_weekend(date)
+            if val.total_seconds() != 0:
+                week_day = RandDataGen.is_weekend(date)
         return date
 
     @staticmethod
-    def _random_high(open_price: float, close_price: float):
+    def _random_high(open_price: float, close_price: float) -> float:
+        """Returns a random high number from the max value between open and close price
+         up to 30% * pips gained. Used to get 'high' values for 'self.data_dict'"""
         max_open_close = max(open_price, close_price)
         dif = abs(close_price - open_price)
-        return round(max_open_close + random.uniform(1.00, 1.2) * dif, 5)
+        return round(max_open_close + random.uniform(1.00, 1.3) * dif, 5)
 
     @staticmethod
     def _random_low(open_price: float, close_price: float):
+        """Returns a random low number from the max value between open and close price
+        down to 30% * pips gained. Used to get 'low' values for 'self.data_dict'"""
         max_open_close = min(open_price, close_price)
         dif = abs(close_price - open_price)
-        return round(max_open_close - random.uniform(1.00, 1.2) * dif, 5)
+        return round(max_open_close - random.uniform(1.00, 1.3) * dif, 5)
 
     @staticmethod
     def _get_close_val(initial_val: float):
+        """Gets close_price value for a initial data dictionary. Used to get 'close_price' data"""
         return round(initial_val + random.uniform(-initial_val / 25, initial_val / 25), 5)
 
     @property
@@ -126,7 +140,7 @@ class RandDataGen:
 
 
 if __name__ == '__main__':
-    test = RandDataGen(8)
+    test = RandDataGen(50)
     print(test.df.to_string())
     print(test.df.dtypes)
 
