@@ -1,7 +1,10 @@
+from application.config import get_logger
 import pandas as pd
 import random
 import datetime as dt
 
+
+logger = get_logger(__name__)
 PAIRS_RANGE_VAL = {
     'EURUSD': [1.2, 0.95],
     'GPBUSD': [1.4, 1.1],
@@ -17,7 +20,7 @@ PAIRS = list(PAIRS_RANGE_VAL.keys())
 options = ['buy', 'sell']
 
 
-class RandomDfGenerator:
+class RandDataGen:
     def __init__(self, number_of_trades: int):
         self.n_trades = number_of_trades
         self._data_dict = self.rand_init_data()
@@ -38,7 +41,7 @@ class RandomDfGenerator:
                 hours=random.randint(0, 23),
                 seconds=random.randint(0, 3599))
             date = first + val
-            week_day = RandomDfGenerator.is_weekend(date)
+            week_day = RandDataGen.is_weekend(date)
         return date
 
     def rand_init_data(self):
@@ -46,33 +49,43 @@ class RandomDfGenerator:
             'symbol': [random.choice(PAIRS) for _ in range(self.n_trades)],
             'volume': [int(round(random.randint(1, 10) / 10)) for _ in range(self.n_trades)],
             'order_type': [random.choice(options) for _ in range(self.n_trades)],
-            'open_time': [RandomDfGenerator.random_future(start, 54) for _ in range(self.n_trades)]
+            'open_time': [RandDataGen.random_future(start, 54) for _ in range(self.n_trades)]
         }
         return data
 
+    @staticmethod
+    def _random_pair_price(pair):
+        return round(random.uniform(PAIRS_RANGE_VAL[pair][0], PAIRS_RANGE_VAL[pair][1]))
+
+    @staticmethod
+    def _random_high(open_price: float, close_price: float):
+        max_open_close = max(open_price, close_price)
+        dif = abs(close_price - open_price)
+        return round(max_open_close + random.uniform(1.00, 1.2) * dif, 5)
+
+    @staticmethod
+    def _random_low(open_price: float, close_price: float):
+        max_open_close = min(open_price, close_price)
+        dif = abs(close_price - open_price)
+        return round(max_open_close - random.uniform(1.00, 1.2) * dif, 5)
+
+    @staticmethod
+    def _get_close_val(initial_val: float):
+        return round(initial_val + random.uniform(-initial_val / 25, initial_val / 25), 5)
+
     def update_data(self):
-        self.data_dict['close_time'] = [RandomDfGenerator.random_future(open_time, 16)
+        self.data_dict['close_time'] = [RandDataGen.random_future(open_time, 16)
                                         for open_time in self.data_dict['open_time']]
 
-        self.data_dict['open_price'] = [round(random.uniform(PAIRS_RANGE_VAL[pair][0], PAIRS_RANGE_VAL[pair][1]), 5)
-                                        for pair in self.data_dict['symbol']]
+        self.data_dict['open_price'] = [RandDataGen._random_pair_price(pair) for pair in self.data_dict['symbol']]
+        self.data_dict['close_price'] = [RandDataGen._get_close_val(vi) for vi in self.data_dict['open_price']]
 
-        self.data_dict['close_price'] = [round(vi + random.uniform(-vi / 25, vi / 25), 5)
-                                         for vi in self.data_dict['open_price']]
+        self.data_dict['high'] = [RandDataGen._random_high(vi, vf)
+                                  for vi, vf in zip(self.data_dict['open_price'], self.data_dict['close_price'])]
 
-        self.data_dict['high'] = [round(vi + random.uniform(1.01, 1.2) * abs(vf - vi), 5)
-                                  for vf, vi in zip(self.data_dict['close_price'], self.data_dict['open_price'])]
+        self.data_dict['low'] = [RandDataGen._random_low(vi, vf)
+                                 for vi, vf in zip(self.data_dict['open_price'], self.data_dict['close_price'])]
 
-        self.data_dict['low'] = [round(vi - random.uniform(1.02, 1.2) * abs(vf - vi), 5)
-                                 for vf, vi in zip(self.data_dict['open_price'], self.data_dict['open_price'])]
-
-    def dates_tester(self):
-        for dates in self.data_dict['open_time'], self.data_dict['close_time']:
-            for idx, date_to_test in enumerate(dates):
-                if date_to_test.weekday() in [5, 6]:
-                    print(f'date is weekend {date_to_test} in {idx}')
-        else:
-            print('done')
 
     @property
     def data_dict(self):
@@ -80,6 +93,6 @@ class RandomDfGenerator:
 
 
 if __name__ == '__main__':
-    test = RandomDfGenerator(8)
+    test = RandDataGen(8)
     print(test.data_dict)
     test.dates_tester()
