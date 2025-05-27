@@ -9,7 +9,7 @@ PAIRS_RANGE_VAL = {
     'EURUSD': [1.2, 0.95],
     'GPBUSD': [1.4, 1.1],
     'USDCAD': [1.42, 1.21],
-    'USDJPY': [140, 120],
+    'USDJPY': [150, 140],
     'AUDCAD': [0.99, 0.84],
     'USDCHF': [0.75, 0.6]
 
@@ -34,33 +34,36 @@ class RandDataGen:
             'symbol': [random.choice(PAIRS) for _ in range(self.n_trades)],
             'volume': [round(random.randint(1, 10) / 10, 2) for _ in range(self.n_trades)],
             'order_type': [random.choice(options) for _ in range(self.n_trades)],
-            'open_time': [RandDataGen.random_future(start, 54) for _ in range(self.n_trades)]
+            'open_time': [RandDataGen._random_future(start, 54) for _ in range(self.n_trades)]
         }
         return data
 
     def _add_profits_to_dict(self):
         """Add 'profit' key and it's values to 'self.dict'. For pairs that don't contain the account
         currency the profit value is calculated as if the base currency was the account currency (very inaccurate)."""
-        open_price, close_price, vol, symbol = [self.data_dict[key_string]
-                                                for key_string in ['open_price', 'close_price', 'volume', 'symbol']]
+        open_price, close_price, vol, symbol, order_type = \
+        [self.data_dict[key_string] for key_string in ['open_price', 'close_price', 'volume', 'symbol', 'order_type']]
+
         lot = 10 ** 5
         profits = []
-        for close_price, open_price, vol, symbol in zip (open_price, close_price, vol, symbol):
+        for open_price, close_price, vol, symbol, order_type in zip(open_price, close_price, vol, symbol, order_type):
             quote = symbol[3:]
-            if  quote == self.currency:
-                profits.append(round(lot * vol * (close_price - open_price), 2))
+            sign = 1 if order_type == 'buy' else -1
+            print(sign)
+            if quote == self.currency:
+                profits.append(round(sign * lot * vol * (close_price - open_price), 2))
 
             else:
-                profits.append(round(lot * vol * (close_price - open_price) / close_price, 2))
+                profits.append(round(sign * lot * vol * (close_price - open_price) / close_price, 2))
 
         self.data_dict['profit'] = profits
 
     def update_data(self):
         """Updates dict with 'order', 'close_time', 'close_price', 'high', 'low', 'profit', 'sl', 'tp',
-        'commission', 'taxes', 'swap'"""
+        'commission', 'taxes', 'swap', 'base', 'quote'"""
         zeros_list = [0 for _ in range(self.n_trades)]
         self.data_dict['order'] = [1000 + i for i in range(self.n_trades)]
-        self.data_dict['close_time'] = [RandDataGen.random_future(open_time, 16)
+        self.data_dict['close_time'] = [RandDataGen._random_future(open_time, 16)
                                         for open_time in self.data_dict['open_time']]
 
         self.data_dict['open_price'] = [RandDataGen._random_pair_price(pair) for pair in self.data_dict['symbol']]
@@ -78,6 +81,8 @@ class RandDataGen:
         self.data_dict['commission'] = zeros_list
         self.data_dict['taxes'] = zeros_list
         self.data_dict['swap'] = zeros_list
+        self.data_dict['base'] = [symbol[3:] for symbol in self.data_dict['symbol']]
+        self.data_dict['quote'] = [symbol[:3] for symbol in self.data_dict['symbol']]
 
     @staticmethod
     def _random_pair_price(pair: str) -> float:
@@ -85,12 +90,12 @@ class RandDataGen:
         return round(random.uniform(PAIRS_RANGE_VAL[pair][0], PAIRS_RANGE_VAL[pair][1]), 5)
 
     @staticmethod
-    def is_weekend(date: dt.datetime) -> bool:
+    def _is_weekend(date: dt.datetime) -> bool:
         """checks weather a date is weekend or not. Returns true if date day is weekend"""
         return date.weekday() in [5, 6]
 
     @staticmethod
-    def random_future(first: dt.datetime, max_weeks: int) -> dt.datetime:
+    def _random_future(first: dt.datetime, max_weeks: int) -> dt.datetime:
         """Returns a date from first to max_weeks to the future"""
         week_day = True
         date = dt.datetime.now()
@@ -102,7 +107,7 @@ class RandDataGen:
                 seconds=random.randint(0, 3599))
             date = first + val
             if val.total_seconds() != 0:
-                week_day = RandDataGen.is_weekend(date)
+                week_day = RandDataGen._is_weekend(date)
         return date
 
     @staticmethod
@@ -117,13 +122,13 @@ class RandDataGen:
     def _random_low(open_price: float, close_price: float):
         """Returns a random low number from the max value between open and close price
         down to 30% * pips gained. Used to get 'low' values for 'self.data_dict'"""
-        max_open_close = min(open_price, close_price)
+        min_open_close = min(open_price, close_price)
         dif = abs(close_price - open_price)
-        return round(max_open_close - random.uniform(1.00, 1.3) * dif, 5)
+        return round(min_open_close - random.uniform(1.00, 1.3) * dif, 5)
 
     @staticmethod
     def _get_close_val(initial_val: float):
-        """Gets close_price value for a initial data dictionary. Used to get 'close_price' data"""
+        """Gets close_price value for an initial data dictionary. Used to get 'close_price' data"""
         return round(initial_val + random.uniform(-initial_val / 25, initial_val / 25), 5)
 
     @property
@@ -143,4 +148,3 @@ if __name__ == '__main__':
     test = RandDataGen(50)
     print(test.df.to_string())
     print(test.df.dtypes)
-
