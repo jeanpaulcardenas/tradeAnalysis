@@ -49,7 +49,6 @@ class RandDataGen:
         for open_price, close_price, vol, symbol, order_type in zip(open_price, close_price, vol, symbol, order_type):
             quote = symbol[3:]
             sign = 1 if order_type == 'buy' else -1
-            print(sign)
             if quote == self.currency:
                 profits.append(round(sign * lot * vol * (close_price - open_price), 2))
 
@@ -119,7 +118,7 @@ class RandDataGen:
         return round(max_open_close + random.uniform(1.00, 1.3) * dif, 5)
 
     @staticmethod
-    def _random_low(open_price: float, close_price: float):
+    def _random_low(open_price: float, close_price: float) -> float:
         """Returns a random low number from the max value between open and close price
         down to 30% * pips gained. Used to get 'low' values for 'self.data_dict'"""
         min_open_close = min(open_price, close_price)
@@ -132,15 +131,15 @@ class RandDataGen:
         return round(initial_val + random.uniform(-initial_val / 25, initial_val / 25), 5)
 
     @property
-    def data_dict(self):
+    def data_dict(self) -> dict:
         return self._data_dict
 
     @property
-    def currency(self):
+    def currency(self) -> str:
         return self._currency
 
     @property
-    def df(self):
+    def df(self) -> pd.DataFrame:
         return self._df
 
 
