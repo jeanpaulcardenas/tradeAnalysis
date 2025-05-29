@@ -1,13 +1,7 @@
-from dash import dcc, html, callback
-from dash.dependencies import Input, Output
 from application.statistics import Metrics
 from application.constants import *
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
-import numpy as np
-import dash
-import datetime as dt
 
 
 class IncomeGraph:
