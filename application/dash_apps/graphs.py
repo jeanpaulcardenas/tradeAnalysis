@@ -25,7 +25,7 @@ except Exception as e:
 
 metrics_obj = Metrics(df, pd.DataFrame(), 'USD')  # currency choices should be restricted or checked
 app.layout = html.Div([
-    html.H1("Profit", style={"text-align": "center"}),
+    html.H1('Profit', style={'text-align': 'center'}),
     html.Br(),
     dcc.DatePickerRange(
         min_date_allowed=start_date,
@@ -34,23 +34,23 @@ app.layout = html.Div([
         end_date=end_date,
         end_date_placeholder_text=end_date,
         initial_visible_month=end_date,
-        id="date range"
+        id='date range'
 
     ),
     dcc.Dropdown(
-        options=["All", "Buy vs Sell", "Pairs", "Day of week"],
-        value="All",
-        id="income dropdown"
+        options=['All', 'Buy vs Sell', 'Pairs', 'Day of week'],
+        value='All',
+        id='income dropdown'
     ),
-    dcc.Graph(id="income graph"),
+    dcc.Graph(id='income graph'),
     html.Br()])
 
 
 @callback(
-    [Output("income graph", "figure")],
-    [Input("date range", "start_date"),
-     Input("date range", "end_date"),
-     Input("income dropdown", "value")])
+    [Output('income graph', 'figure')],
+    [Input('date range', 'start_date'),
+     Input('date range', 'end_date'),
+     Input('income dropdown', 'value')])
 def update_charts(start, end, choice):
     income_graph = IncomeGraph(metrics_object=metrics_obj, start=start, end=end, choice=choice).get_figure()
     return [income_graph]
