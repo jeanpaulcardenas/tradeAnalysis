@@ -10,7 +10,7 @@ import datetime as dt
 
 app = dash.Dash()
 logger = get_logger(__name__)
-df = RandDataGen(80, 'USD').df
+df = RandDataGen(20, 'USD').df
 try:
     start_date = min(df.close_time)
     end_date = max(df.close_time)
@@ -38,8 +38,11 @@ app.layout = html.Div([
 
     ),
     dcc.Dropdown(
-        options=['All', 'Buy vs Sell', 'Pairs', 'Day of week'],
-        value='All',
+        options=[{'label': 'All', 'value': 0},
+                 {'label': 'Buy vs Sell', 'value': 'order_type'},
+                 {'label': 'Pairs', 'value': 'symbol'},
+                 {'label': 'Day of week', 'value': 'day_of_week'}],
+        value=0,
         id='income dropdown'
     ),
     dcc.Graph(id='income graph'),
