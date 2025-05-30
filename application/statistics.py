@@ -41,7 +41,7 @@ class Metrics:
         self._currency = currency.upper()
         if not self.df.empty:
             self.df.convert_dtypes()
-            self.sort_df_values(by='open_time')
+            self.sort_df_values(by='close_time')
             self._complete_dataframe()
         else:
             keys = [field.name for field in fields(Trade)] \
@@ -308,16 +308,16 @@ class Metrics:
         return lower, upper, msg
 
     @staticmethod
-    def _get_pips(row: pd.Series):
+    def _get_pips(row: pd.Series) -> int:
         """Get pips as 0.0001 pair value difference. for JPY pair's it's 0.01."""
         diff = abs(row.close_price - row.open_price)
         sign = 1
         if isinstance(row.won_trade, bool):
             sign = (-1) ** (row.won_trade + 1)
         if 'JPY' in row.symbol:
-            return sign * 100 * diff
+            return int(round(sign * 100 * diff, 0))
         else:
-            return sign * 10 ** 4 * diff
+            return int(round(sign * 10 ** 4 * diff, 0))
 
     @staticmethod
     def _max_is_less_than_actual(maxim: float, actual: float, reverse: bool = False) -> bool:
