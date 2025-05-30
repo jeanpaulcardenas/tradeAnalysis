@@ -286,19 +286,23 @@ class TradeData:
             raise ValueError("Balance amount can't be converted to float")
 
     @property
-    def trades(self):
+    def trades(self) -> list[Trade]:
+        """Returns a list with all trades (Trade objects)"""
         return self._trade_objects
 
     @property
-    def balances(self):
+    def balances(self) -> list[Balance]:
+        """Returns a list with all balance objects"""
         return self._balance_objects
 
     @property
-    def currency(self):
+    def currency(self) -> str:
+        """Returns the account currency as string e.g 'USD'"""
         return self._currency
 
     @property
-    def forex_trades(self):
+    def forex_trades(self) -> list[Trade]:
+        """Returns a list with only Forex trades."""
         return [t for t in self.trades if t.base in PAIRS and t.quote in PAIRS]
 
 
@@ -540,7 +544,8 @@ class TraderMadeClient:
         return dt.timedelta(seconds=0)
 
     @property
-    def api_key(self):
+    def api_key(self) -> str:
+        """Returns the API Tradermade key"""
         return self._API_KEY
 
 
