@@ -1,15 +1,26 @@
 from application.statistics import Metrics
 from application.constants import *
+from application.config import get_logger
 import pandas as pd
 import plotly.graph_objects as go
+import datetime as dt
+
+
+logger = get_logger(__name__)
 
 
 class IncomeGraph:
 
-    def __init__(self, metrics_object: Metrics, choice: str):
+    def __init__(self, start: dt.datetime, end: dt.datetime, metrics_object: Metrics, choice: str):
         self.metrics_ob = metrics_object
-        self.df: pd.DataFrame = metrics_object.df
+        self.df = self.df_between_dates(start_date=start, end_date=end)
         self.choice = choice
+
+    def df_between_dates(self, start_date: dt.datetime, end_date: dt.datetime) -> pd.DataFrame:
+        df = self.metrics_ob.df
+        df_ranged = df[(df['open_time'] > start_date) & (df['close_time'] < end_date)].copy().reset_index(inplace=True)
+
+        return df_ranged
 
     def layout(self) -> dict:
         return dict(template="plotly_dark",
@@ -33,9 +44,12 @@ class IncomeGraph:
     def create_dataframes(self, choice: str) -> str:
         choices = {
             'All': [self.df],
-            'Buy vs Sell': [self.df[self.df.order_type == order_type] for order_type in order_types],
-            'Pairs': [self.df[self.df.symbol == pair_symbol] for pair_symbol in self.df['symbol'].unique()],
-            'Day of week': [self.df[self.df.day_of_week == day] for day in self.df['day_of_week'].unique()],
+            'Buy vs Sell': [self.df[self.df.order_type == order_type].copy().reset_index(inplace=True)
+                            for order_type in order_types],
+            'Pairs': [self.df[self.df.symbol == pair_symbol].copy().reset_index(inplace=True)
+                      for pair_symbol in self.df['symbol'].unique()],
+            'Day of week': [self.df[self.df.day_of_week == day].copy().reset_index(inplace=True)
+                            for day in self.df['day_of_week'].unique()],
         }
         return choices[choice]
 
@@ -51,8 +65,6 @@ class IncomeGraph:
         fig = go.Figure(layout=self.layout())
         objs = self.create_dataframes(choice=self.choice)
         for i, df in enumerate(objs):
-            df = df.copy()
-            df.reset_index(inplace=True)
             name = self.get_name(df=df)
             fig.add_trace(go.Scatter(
                 name=name,
