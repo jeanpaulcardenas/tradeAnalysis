@@ -2,6 +2,7 @@ from application.config import get_logger
 import pandas as pd
 import random
 import datetime as dt
+import pickle
 
 
 logger = get_logger(__name__)
@@ -145,5 +146,7 @@ class RandDataGen:
 
 if __name__ == '__main__':
     test = RandDataGen(50)
+    with open('./cached_random_df.pkl', 'wb') as f:
+        pickle.dump(test, f)
     print(test.df.to_string())
     print(test.df.dtypes)
