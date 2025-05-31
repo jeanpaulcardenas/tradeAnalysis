@@ -4,49 +4,59 @@ from application.config import get_logger
 from application.statistics import Metrics
 from application.dash_graph_f.income import IncomeGraph
 from application.random_df_generator import RandDataGen
+from application.constants import INCOME_DROPDOWN_OPTIONS
+from application.helpers import metrics_between_dates
 import pandas as pd
 import datetime as dt
-
+import pickle
 
 app = dash.Dash()
 logger = get_logger(__name__)
-df = RandDataGen(20, 'USD').df
-try:
-    start_date = min(df.close_time)
-    end_date = max(df.close_time)
-    logger.info(f"{__name__} dates from date range picker: {start_date} to {end_date}")
+with open('../cached_random_df.pkl', 'rb') as f:
+    rand_data = pickle.load(f)
+    random_metric = Metrics(rand_data.df, pd.DataFrame(), rand_data.currency)
+    rand_df = random_metric.df
 
-except Exception as e:
-    logger.error(f"Error getting dataframes from min and max dates of {df['close_time']}, "
-                 f"using 100 days back from today")
-    now = dt.datetime.now()
-    start_date = now - dt.timedelta(days=100)
-    end_date = now
 
-metrics_obj = Metrics(df, pd.DataFrame(), 'USD')  # currency choices should be restricted or checked
-app.layout = html.Div([
-    html.H1('Profit', style={'text-align': 'center'}),
-    html.Br(),
-    dcc.DatePickerRange(
-        min_date_allowed=start_date,
-        start_date_placeholder_text=start_date,
-        start_date=start_date,
-        end_date=end_date,
-        end_date_placeholder_text=end_date,
-        initial_visible_month=end_date,
-        id='date range'
+def set_start_end_dates(base_df: pd.DataFrame) -> tuple[dt.datetime, dt.datetime]:
+    """Returns tuple (min date, max date) of a metrics.df"""
+    try:
+        start_date = min(base_df.close_time)
+        end_date = max(base_df.close_time)
+        logger.info(f"{__name__} dates from date range picker: {start_date} to {end_date}")
 
-    ),
-    dcc.Dropdown(
-        options=[{'label': 'All', 'value': 0},
-                 {'label': 'Buy vs Sell', 'value': 'order_type'},
-                 {'label': 'Pairs', 'value': 'symbol'},
-                 {'label': 'Day of week', 'value': 'day_of_week'}],
-        value=0,
-        id='income dropdown'
-    ),
-    dcc.Graph(id='income graph'),
-    html.Br()])
+    except Exception as e:
+        logger.error(f"Error getting dataframes from min and max dates of {base_df['close_time'].head()}, "
+                     f"using 100 days back from today")
+        now = dt.datetime.now()
+        start_date = now - dt.timedelta(days=100)
+        end_date = now
+    return start_date, end_date
+
+
+def app_layout(start_date, end_date):
+    layout = html.Div([
+        html.H1('Profit', style={'text-align': 'center'}),
+        html.Br(),
+        dcc.DatePickerRange(
+            min_date_allowed=start_date,
+            start_date_placeholder_text=start_date,
+            start_date=start_date,
+            end_date=end_date,
+            end_date_placeholder_text=end_date,
+            initial_visible_month=end_date,
+            id='date range'
+
+        ),
+        dcc.Dropdown(
+            options=INCOME_DROPDOWN_OPTIONS,
+            value=0,
+            id='income dropdown'
+        ),
+        dcc.Graph(id='income graph'),
+        html.Br()])
+
+    return layout
 
 
 @callback(
@@ -54,10 +64,13 @@ app.layout = html.Div([
     [Input('date range', 'start_date'),
      Input('date range', 'end_date'),
      Input('income dropdown', 'value')])
-def update_charts(start, end, choice):
-    income_graph = IncomeGraph(metrics_object=metrics_obj, start=start, end=end, choice=choice).get_figure()
+def update_charts(start_date, end_date, choice):
+    metrics_obj = metrics_between_dates(random_metric, start_date=start_date, end_date=end_date)
+    income_graph = IncomeGraph(metrics_object=metrics_obj, choice=choice).get_figure()
     return [income_graph]
 
 
 if __name__ == '__main__':
+    start, end = set_start_end_dates(rand_df)
+    app.layout = app_layout(start_date=start, end_date=end)
     app.run(debug=True)
