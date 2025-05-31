@@ -6,6 +6,23 @@ TM_API_KEY = os.getenv('TM_API_KEY')  # Tradermade API key
 
 order_types = {'buy', 'sell'}
 
+DOW = {
+    0: 'monday',
+    1: 'tuesday',
+    2: 'wednesday',
+    3: 'thursday',
+    4: 'friday',
+    5: 'saturday',
+    6: 'sunday'
+}
+
+INCOME_DROPDOWN_OPTIONS = [
+    {'label': 'All', 'value': 0},
+    {'label': 'Buy vs Sell', 'value': 'order_type'},
+    {'label': 'Pairs', 'value': 'symbol'},
+    {'label': 'Day of week', 'value': 'day_of_week'}
+    ]
+
 MONTHS = {
     '01': 'enero',
     '02': 'febrero',
