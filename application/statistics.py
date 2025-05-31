@@ -1,5 +1,6 @@
 from application.mt4data import Trade, TradeData, Balance  # noqa: F401
 from application.config import get_logger
+from application.constants import DOW
 from dataclasses import fields
 from application.constants import CURRENCIES
 import numpy as np
@@ -25,15 +26,6 @@ def zero_division_to_zero(func):
 
 
 class Metrics:
-    dow = {
-        0: 'monday',
-        1: 'tuesday',
-        2: 'wednesday',
-        3: 'thursday',
-        4: 'friday',
-        5: 'saturday',
-        6: 'sunday'
-    }
 
     def __init__(self, trades_df: pd.DataFrame, balance_df: pd.DataFrame, currency: str):
         self.df = trades_df
@@ -220,7 +212,7 @@ class Metrics:
         self.df['max_possible_loss'] = self.df.apply(func=lambda row: round(self._get_max_gain(row, True), 2),
                                                      axis='columns')
         self.df['cum_profit'] = self.df.profit.cumsum()
-        self.df['day_of_week'] = self.df.close_time.apply(func=lambda date: Metrics.dow[date.weekday()])
+        self.df['day_of_week'] = self.df.close_time.apply(func=lambda date: DOW[date.weekday()])
         self.df['won_trade'] = (self.df.profit > 0)
         self.df['pips'] = self.df.apply(Metrics._get_pips, axis='columns')
         self.df.symbol = self.df.symbol.astype('category')
