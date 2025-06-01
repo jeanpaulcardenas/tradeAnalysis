@@ -16,6 +16,18 @@ DOW = {
     6: 'sunday'
 }
 
+METRICS_DROPDOWN_OPTIONS = [
+    {'label': 'Income (in acct currency)', 'value': 'profit'},
+    {'label': 'PIPs', 'value': 'pips'}
+]
+
+BARS_DROPDOWN_OPTIONS = [
+    {'label': 'Trades', 'value': 0},
+    {'label': 'Weekly', 'value': 0},
+    {'label': 'Monthly', 'value': 0},
+    {'label': 'Annual', 'value': 0}
+]
+
 INCOME_DROPDOWN_OPTIONS = [
     {'label': 'All', 'value': 0},
     {'label': 'Buy vs Sell', 'value': 'order_type'},
