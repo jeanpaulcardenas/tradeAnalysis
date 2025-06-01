@@ -12,10 +12,9 @@ class IncomeGraph:
     def __init__(self, metrics_object: Metrics, choice: str):
         self.metrics_ob = metrics_object
         self.df = self.metrics_ob.df
-        logger.info(f'{__name__} income graph df: {self.df.head()}')
         self.choice = choice
 
-    def layout(self) -> dict:
+    def layout(self, metric) -> dict:
         return dict(template="plotly_dark",
                     showlegend=True,
                     title=dict(
@@ -30,8 +29,8 @@ class IncomeGraph:
                     yaxis=dict(
                         griddash="solid",
                         zerolinecolor="rgba(120, 120, 120, 0.5)",
-                        ticksuffix=self.metrics_ob.currency_symbol,
-                        tickformat='d',
+                        ticksuffix=self.metrics_ob.currency_symbol if metric == 'profit' else None,
+                        tickformat=',d',
                         ticklabelposition='outside right',
                         separatethousands=True,
                     ))
@@ -46,22 +45,26 @@ class IncomeGraph:
             'day_of_week': [self.df[self.df.day_of_week == day].reset_index(drop=True)
                             for day in self.df['day_of_week'].unique()],
         }
-        return choices[choice]
+        try:
+            return choices[choice]
+        except KeyError:
+            logger.error(f"Error. choice for IncomeGraph {choice} not valid")
+            return [pd.DataFrame()]
 
-    def get_name(self, df):
+    def get_legend_name(self, df):
         if self.choice:
             name = df[self.choice][0]
         else:
             name = "All trades"
         return name
 
-    def get_figure(self):
-        fig = go.Figure(layout=self.layout())
+    def get_figure(self, column):
+        fig = go.Figure(layout=self.layout(column))
         objs = self.create_dataframes(choice=self.choice)
         for i, df in enumerate(objs):
-            name = self.get_name(df=df)
+            name = self.get_legend_name(df=df)
             x = [df.open_time[0]] + df.close_time.to_list()
-            y = [0] + df.profit.cumsum().to_list()
+            y = [0] + df[column].cumsum().to_list()
             fig.add_trace(go.Scatter(
                 name=name,
                 showlegend=True,
@@ -78,3 +81,9 @@ class IncomeGraph:
                 )))
 
         return fig
+
+
+class BarGraph:
+    def __init__(self, metrics_obj: Metrics, choice: str):
+        self.metrics = metrics_obj
+        self.choice = choice
