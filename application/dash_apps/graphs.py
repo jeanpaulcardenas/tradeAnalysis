@@ -4,7 +4,7 @@ from application.config import get_logger
 from application.statistics import Metrics
 from application.dash_graph_f.income import IncomeGraph
 from application.random_df_generator import RandDataGen
-from application.constants import INCOME_DROPDOWN_OPTIONS
+from application.constants import INCOME_DROPDOWN_OPTIONS, BARS_DROPDOWN_OPTIONS, METRICS_DROPDOWN_OPTIONS
 from application.helpers import metrics_between_dates
 import pandas as pd
 import datetime as dt
@@ -38,6 +38,11 @@ def app_layout(start_date, end_date):
     layout = html.Div([
         html.H1('Profit', style={'text-align': 'center'}),
         html.Br(),
+        dcc.Dropdown(
+            options=METRICS_DROPDOWN_OPTIONS,
+            value='profit',
+            id='metric dropdown'
+        ),
         dcc.DatePickerRange(
             min_date_allowed=start_date,
             start_date_placeholder_text=start_date,
@@ -54,19 +59,29 @@ def app_layout(start_date, end_date):
             id='income dropdown'
         ),
         dcc.Graph(id='income graph'),
-        html.Br()])
+        html.Br(),
+
+        dcc.Dropdown(
+            options=[],
+            value=0,
+            id='bars dropdown'
+        ),
+        dcc.Graph(id='bars graph')
+    ])
 
     return layout
 
 
 @callback(
     [Output('income graph', 'figure')],
-    [Input('date range', 'start_date'),
+    [Input('metric dropdown', 'value'),
+     Input('date range', 'start_date'),
      Input('date range', 'end_date'),
-     Input('income dropdown', 'value')])
-def update_charts(start_date, end_date, choice):
+     Input('income dropdown', 'value'),
+     Input('bars graph', 'value')])
+def update_charts(metric, start_date, end_date, inc_choice, bars_choice):
     metrics_obj = metrics_between_dates(random_metric, start_date=start_date, end_date=end_date)
-    income_graph = IncomeGraph(metrics_object=metrics_obj, choice=choice).get_figure()
+    income_graph = IncomeGraph(metrics_object=metrics_obj, choice=inc_choice).get_figure(metric)
     return [income_graph]
 
 
