@@ -38,7 +38,7 @@ class Metrics:
         else:
             keys = [field.name for field in fields(Trade)] \
                    + ['won_trade', 'max_possible_gain', 'max_possible_loss', 'accumulative_profit', 'day of week',
-                      'pip']
+                      'pips']
             self.df = pd.DataFrame(columns=keys)
         print(self.df.to_string())
 
@@ -198,6 +198,8 @@ class Metrics:
             elif val - min_val > max_runup:
                 max_runup = val - min_val
         return max_runup
+
+
 
     def sort_df_values(self, by):
         """sorts dataframe by values 'by'. 'by' must be any of the available column names"""
