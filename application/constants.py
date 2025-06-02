@@ -9,7 +9,7 @@ order_types = {'buy', 'sell'}
 
 METRICS_DF_KEYS = ['order', 'symbol', 'order_type', 'volume', 'open_time', 'close_time', 'time_opened', 'open_price',
                    'close_price', 'high', 'low', 'sl', 'tp', 'profit', 'max_possible_gain', 'max_possible_loss',
-                   'cum_profit', 'pips', 'commission', 'day_of_week', 'won_trade', 'taxes', 'swap', ]
+                   'cum_profit', 'pips', 'commission', 'day_of_week', 'won_trade', 'taxes', 'swap', 'base', 'quote']
 DOW = {
     0: 'monday',
     1: 'tuesday',
