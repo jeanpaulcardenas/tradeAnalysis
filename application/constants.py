@@ -1,11 +1,15 @@
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 TM_API_KEY = os.getenv('TM_API_KEY')  # Tradermade API key
 
 order_types = {'buy', 'sell'}
 
+METRICS_DF_KEYS = ['order', 'symbol', 'order_type', 'volume', 'open_time', 'close_time', 'time_opened', 'open_price',
+                   'close_price', 'high', 'low', 'sl', 'tp', 'profit', 'max_possible_gain', 'max_possible_loss',
+                   'cum_profit', 'pips', 'commission', 'day_of_week', 'won_trade', 'taxes', 'swap', ]
 DOW = {
     0: 'monday',
     1: 'tuesday',
@@ -33,7 +37,7 @@ INCOME_DROPDOWN_OPTIONS = [
     {'label': 'Buy vs Sell', 'value': 'order_type'},
     {'label': 'Pairs', 'value': 'symbol'},
     {'label': 'Day of week', 'value': 'day_of_week'}
-    ]
+]
 
 MONTHS = {
     '01': 'enero',
@@ -61,60 +65,59 @@ CURRENCIES = {
 }
 
 PAIRS = {
-    'AED':	'UAE Dirham',
-    'AOA':	'Angolan Kwanza',
-    'ARS':	'Argentine Peso',
-    'AUD':	'Australian Dollar',
-    'BGN':	'Bulgaria Lev',
-    'BHD':	'Bahraini Dinar',
-    'BRL':	'Brazilian Real',
-    'CAD':	'Canadian Dollar',
-    'CHF':	'Swiss Franc',
-    'CLP':  'Chilean Peso',
-    'CNY':	'Chinese Yuan onshore',
-    'CNH':	'Chinese Yuan offshore',
-    'COP':	'Colombian Peso',
-    'CZK':	'Czech Koruna',
-    'DKK':	'Danish Krone',
-    'EUR':	'Euro',
-    'GBP':	'British Pound Sterling',
-    'HKD':	'Hong Kong Dollar',
-    'HRK':  'Croatian Kuna',
-    'HUF':	'Hungarian Forint',
-    'IDR':	'Indonesian Rupiah',
-    'ILS':	'Israeli New Sheqel',
-    'INR':	'Indian Rupee',
-    'ISK':	'Icelandic Krona',
-    'JPY':	'Japanese Yen',
-    'KRW':	'South Korean Won',
-    'KWD':	'Kuwaiti Dinar',
-    'MAD':	'Moroccan Dirham',
-    'MXN':	'Mexican Peso',
-    'MYR':	'Malaysian Ringgit',
-    'NGN':	'Nigerean Naira',
-    'NOK':	'Norwegian Krone',
-    'NZD':	'New Zealand Dollar',
-    'OMR':	'Omani Rial',
-    'PEN':	'Peruvian Nuevo Sol',
-    'PHP':	'Philippine Peso',
-    'PLN':	'Polish Zloty',
-    'RON':	'Romanian Leu',
-    'RUB':	'Russian Ruble',
-    'SAR':	'Saudi Arabian Riyal',
-    'SEK':	'Swedish Krona',
-    'SGD':	'Singapore Dollar',
-    'THB':	'Thai Baht',
-    'TRY':	'Turkish Lira',
-    'TWD':	'Taiwanese Dollar',
-    'USD':	'US Dollar',
-    'VND':	'Vietnamese Dong',
-    'XAG':	'Silver (troy ounce)',
-    'XAU':	'Gold (troy ounce)',
-    'XPD':	'Palladium',
-    'XPT':	'Platinum',
-    'ZAR':	'South African Rand'
+    'AED': 'UAE Dirham',
+    'AOA': 'Angolan Kwanza',
+    'ARS': 'Argentine Peso',
+    'AUD': 'Australian Dollar',
+    'BGN': 'Bulgaria Lev',
+    'BHD': 'Bahraini Dinar',
+    'BRL': 'Brazilian Real',
+    'CAD': 'Canadian Dollar',
+    'CHF': 'Swiss Franc',
+    'CLP': 'Chilean Peso',
+    'CNY': 'Chinese Yuan onshore',
+    'CNH': 'Chinese Yuan offshore',
+    'COP': 'Colombian Peso',
+    'CZK': 'Czech Koruna',
+    'DKK': 'Danish Krone',
+    'EUR': 'Euro',
+    'GBP': 'British Pound Sterling',
+    'HKD': 'Hong Kong Dollar',
+    'HRK': 'Croatian Kuna',
+    'HUF': 'Hungarian Forint',
+    'IDR': 'Indonesian Rupiah',
+    'ILS': 'Israeli New Sheqel',
+    'INR': 'Indian Rupee',
+    'ISK': 'Icelandic Krona',
+    'JPY': 'Japanese Yen',
+    'KRW': 'South Korean Won',
+    'KWD': 'Kuwaiti Dinar',
+    'MAD': 'Moroccan Dirham',
+    'MXN': 'Mexican Peso',
+    'MYR': 'Malaysian Ringgit',
+    'NGN': 'Nigerean Naira',
+    'NOK': 'Norwegian Krone',
+    'NZD': 'New Zealand Dollar',
+    'OMR': 'Omani Rial',
+    'PEN': 'Peruvian Nuevo Sol',
+    'PHP': 'Philippine Peso',
+    'PLN': 'Polish Zloty',
+    'RON': 'Romanian Leu',
+    'RUB': 'Russian Ruble',
+    'SAR': 'Saudi Arabian Riyal',
+    'SEK': 'Swedish Krona',
+    'SGD': 'Singapore Dollar',
+    'THB': 'Thai Baht',
+    'TRY': 'Turkish Lira',
+    'TWD': 'Taiwanese Dollar',
+    'USD': 'US Dollar',
+    'VND': 'Vietnamese Dong',
+    'XAG': 'Silver (troy ounce)',
+    'XAU': 'Gold (troy ounce)',
+    'XPD': 'Palladium',
+    'XPT': 'Platinum',
+    'ZAR': 'South African Rand'
 }
-
 
 COLORS = {
     'blue': 'rgb(0,80,250)',
@@ -135,4 +138,3 @@ COLUMN_USED = {
     'Pairs': 'symbol',
     'Day of week': 'day_of_week',
 }
-
