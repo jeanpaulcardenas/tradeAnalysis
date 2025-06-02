@@ -1,6 +1,6 @@
 from application.mt4data import Trade, TradeData, Balance  # noqa: F401
 from application.config import get_logger
-from application.constants import DOW
+from application.constants import DOW, METRICS_DF_KEYS
 from dataclasses import fields
 from application.constants import CURRENCIES
 import numpy as np
@@ -36,9 +36,7 @@ class Metrics:
             self.sort_df_values(by='close_time')
             self._complete_dataframe()
         else:
-            keys = [field.name for field in fields(Trade)] \
-                   + ['won_trade', 'max_possible_gain', 'max_possible_loss', 'accumulative_profit', 'day of week',
-                      'pips']
+            keys = METRICS_DF_KEYS
             self.df = pd.DataFrame(columns=keys)
         print(self.df.to_string())
 
@@ -199,8 +197,6 @@ class Metrics:
                 max_runup = val - min_val
         return max_runup
 
-
-
     def sort_df_values(self, by):
         """sorts dataframe by values 'by'. 'by' must be any of the available column names"""
         self.df.sort_values(by=by, inplace=True, ignore_index=True)
@@ -220,6 +216,7 @@ class Metrics:
         self.df.symbol = self.df.symbol.astype('category')
         self.df.order_type = self.df.order_type.astype('category')
         self.df.day_of_week = self.df.day_of_week.astype('category')
+        self.df = self.df[METRICS_DF_KEYS]
 
     def _max_consecutive_streak(self, condition: bool = True) -> int:
         """Returns the maximum consecutive streak of trades where won_trade == condition"""
