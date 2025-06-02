@@ -8,13 +8,24 @@ logger = get_logger(__name__)
 
 
 class IncomeGraph:
-
     def __init__(self, metrics_object: Metrics, choice: str):
         self.metrics_ob = metrics_object
         self.df = self.metrics_ob.df
         self.choice = choice
 
-    def layout(self, metric) -> dict:
+    def get_figure(self, column):
+        """Returns a scatter plot figure. Plots are dependant on self.choice"""
+        fig = go.Figure(layout=self._layout(column))
+        objs = self._create_dataframes(choice=self.choice)
+        for i, df in enumerate(objs):
+            name = self._get_legend_name(df=df)
+            x = [df.open_time[0]] + df.close_time.to_list()
+            y = [0] + df[column].cumsum().to_list()
+            IncomeGraph._add_scatter_plot(fig, name, x, y, i)
+        return fig
+
+    def _layout(self, metric) -> dict:
+        """Creates layout for a plot. This one is specifically created for a scatter plot"""
         return dict(template="plotly_dark",
                     showlegend=True,
                     title=dict(
@@ -35,7 +46,7 @@ class IncomeGraph:
                         separatethousands=True,
                     ))
 
-    def create_dataframes(self, choice: str) -> list[pd.DataFrame]:
+    def _create_dataframes(self, choice: str) -> list[pd.DataFrame]:
         choices = {
             0: [self.df],
             'order_type': [self.df[self.df.order_type == order_type].reset_index(drop=True)
@@ -51,36 +62,30 @@ class IncomeGraph:
             logger.error(f"Error. choice for IncomeGraph {choice} not valid")
             return [pd.DataFrame()]
 
-    def get_legend_name(self, df):
+    def _get_legend_name(self, df):
+        """Gets the corresponding legend name by user's choice (self.choice)."""
         if self.choice:
             name = df[self.choice][0]
         else:
             name = "All trades"
         return name
 
-    def get_figure(self, column):
-        fig = go.Figure(layout=self.layout(column))
-        objs = self.create_dataframes(choice=self.choice)
-        for i, df in enumerate(objs):
-            name = self.get_legend_name(df=df)
-            x = [df.open_time[0]] + df.close_time.to_list()
-            y = [0] + df[column].cumsum().to_list()
-            fig.add_trace(go.Scatter(
-                name=name,
-                showlegend=True,
-                legendgroup=name,
-                x=x,
-                y=y,
-                mode='lines+markers',
-                textposition='top right',
-                texttemplate='%{y}',
-                line=dict(
-                    width=2,
-                    shape="hv",
-                    color=list(COLORS.values())[i]
-                )))
-
-        return fig
+    @staticmethod
+    def _add_scatter_plot(fig: go.Figure, name: str, x: list[float], y: list[float], idx: int):
+        fig.add_trace(go.Scatter(
+            name=name,
+            showlegend=True,
+            legendgroup=name,
+            x=x,
+            y=y,
+            mode='lines+markers',
+            textposition='top right',
+            texttemplate='%{y}',
+            line=dict(
+                width=2,
+                shape="hv",
+                color=list(COLORS.values())[idx]
+            )))
 
 
 class BarGraph:
