@@ -25,7 +25,7 @@ def set_start_end_dates(base_df: pd.DataFrame) -> tuple[dt.datetime, dt.datetime
         end_date = max(base_df.close_time)
         logger.info(f"{__name__} dates from date range picker: {start_date} to {end_date}")
 
-    except Exception as e:
+    except Exception:
         logger.error(f"Error getting dataframes from min and max dates of {base_df['close_time'].head()}, "
                      f"using 100 days back from today")
         now = dt.datetime.now()
@@ -35,6 +35,7 @@ def set_start_end_dates(base_df: pd.DataFrame) -> tuple[dt.datetime, dt.datetime
 
 
 def app_layout(start_date, end_date):
+    """Create layout of graph's page. Start and end date will be the initial values of date picker range."""
     layout = html.Div([
         html.H1('Profit', style={'text-align': 'center'}),
         html.Br(),
@@ -62,7 +63,7 @@ def app_layout(start_date, end_date):
         html.Br(),
 
         dcc.Dropdown(
-            options=[],
+            options=BARS_DROPDOWN_OPTIONS,
             value=0,
             id='bars dropdown'
         ),
@@ -78,7 +79,7 @@ def app_layout(start_date, end_date):
      Input('date range', 'start_date'),
      Input('date range', 'end_date'),
      Input('income dropdown', 'value'),
-     Input('bars graph', 'value')])
+     Input('bars dropdown', 'value')])
 def update_charts(metric, start_date, end_date, inc_choice, bars_choice):
     metrics_obj = metrics_between_dates(random_metric, start_date=start_date, end_date=end_date)
     income_graph = IncomeGraph(metrics_object=metrics_obj, choice=inc_choice).get_figure(metric)
