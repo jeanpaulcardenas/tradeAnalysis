@@ -26,10 +26,10 @@ METRICS_DROPDOWN_OPTIONS = [
 ]
 
 BARS_DROPDOWN_OPTIONS = [
-    {'label': 'Trades', 'value': 0},
-    {'label': 'Weekly', 'value': 0},
-    {'label': 'Monthly', 'value': 0},
-    {'label': 'Annual', 'value': 0}
+    {'label': 'Day', 'value': 'D'},
+    {'label': 'Weekly', 'value': 'W'},
+    {'label': 'Monthly', 'value': 'ME'},
+    {'label': 'Annual', 'value': 'YE'}
 ]
 
 INCOME_DROPDOWN_OPTIONS = [
