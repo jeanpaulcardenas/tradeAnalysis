@@ -86,35 +86,49 @@ class BarGraph:
     def __init__(self, metrics_obj: Metrics, choice: str, period: str):
         self.metrics = metrics_obj
         self.choice = choice
+        self.df = self.metrics.df
         self.period = period
 
     def _bar_fig_layout(self) -> dict:
         """Returns layout dictionary for a plotly bar figure"""
-        return dict(height=700, template="plotly_dark", title=dict(
-            text=f'Income by period', x=0.5,
-            font=dict(
-                color='#2C74B3',
-                family='sans-serif',
-                size=34
+        return dict(
+            height=700,
+            barmode='relative',
+            template="plotly_dark",
+            title=dict(
+                text=f'Income by period', x=0.5,
+                font=dict(
+                    color='#2C74B3',
+                    family='sans-serif',
+                    size=34
+                )
+            ), xaxis=dict(
+                gridcolor='rgba(44, 116, 179, 0.2)',
+                griddash='solid',
+                zerolinecolor='rgba(120, 120, 120, 0.4)',
+
+            ), yaxis=dict(
+                gridcolor='rgba(44, 116, 179, 0.2)',
+                griddash='solid',
+                zerolinecolor='rgba(44, 116, 179, 0.5)',
+                separatethousands=True,
+                ticksuffix=self.metrics.currency_symbol
+            ))
+
+    def _crate_dataframe(self):
+        dataframe = self.metrics.income_by_period(column=self.choice, frequency=self.period)
+
+        return dataframe
+
+    def add_bar_plot(self):
+        fig = go.Figure(layout=self._bar_fig_layout())
+        dataframe = self._crate_dataframe()
+        for item in dataframe.columns:
+            print(item)
+            fig.add_bar(
+                name=item,
+                x=dataframe.index,
+                y=dataframe[item]
             )
-        ), xacis=dict(
-            gridcolor='rgba(44, 116, 179, 0.2)',
-            griddash='solid',
-            zerolinecolor='rgba(120, 120, 120, 0.4)',
 
-        ), yaxis=dict(
-            gridcolor='rgba(44, 116, 179, 0.2)',
-            griddash='solid',
-            zerolinecolor='rgba(44, 116, 179, 0.5)',
-            separatethousands=True,
-            ticksuffix=self.metrics.currency_symbol
-        ))
-
-    # def crate_dataframe(self):
-    #     for
-    # def add_bar_plot(self):
-    #     fig = go.Figure(layout=self._bar_fig_layout())
-    #     dataframe = craete_df()
-    #     fig.add_bar(
-    #         name=name
-    #     )
+        return fig
