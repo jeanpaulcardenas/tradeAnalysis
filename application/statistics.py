@@ -274,18 +274,25 @@ class Metrics:
         else:
             return row.profit
 
-    def income_by_period(self, column):
-        df = self.df['close_time', 'profit']
+    def income_by_period(self, column: str, frequency: str) -> pd.DataFrame:
+        """returns a grouped dataframe with columns df[column].unique() and index my frequency: frequency end's."""
+
+        df = self.df[['close_time']].copy()
         try:
-            for item in self.df[str(column)].unique():
-                df[str(item)] = self.df.ing[self.df[str(column) == item]]
+            if not column:
+                df = self.df[['close_time', 'profit']]
+
+            else:
+                for item in self.df[str(column)].unique():
+                    df[str(item)] = self.df.profit[self.df[str(column)] == item]
 
         except KeyError:
             logger.error(f"Column parameter for income_by_period '{column}'"
                          f" does not exist in dataframe:\n {self.df.head()}")
             return pd.DataFrame()
 
-        grouped_df = df.groupby(pd.Grouper(key='close_time', freq='ME'))
+        grouped_df = df.groupby(pd.Grouper(key='close_time', freq=frequency)).sum()
+        logger.info(f"This is the grouped df:\n {grouped_df}")
         return grouped_df
 
     @staticmethod
