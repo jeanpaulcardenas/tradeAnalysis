@@ -274,6 +274,20 @@ class Metrics:
         else:
             return row.profit
 
+    def income_by_period(self, column):
+        df = self.df['close_time', 'profit']
+        try:
+            for item in self.df[str(column)].unique():
+                df[str(item)] = self.df.ing[self.df[str(column) == item]]
+
+        except KeyError:
+            logger.error(f"Column parameter for income_by_period '{column}'"
+                         f" does not exist in dataframe:\n {self.df.head()}")
+            return pd.DataFrame()
+
+        grouped_df = df.groupby(pd.Grouper(key='close_time', freq='ME'))
+        return grouped_df
+
     @staticmethod
     def bootstrap_confidence_interval_mean(
             data: pd.Series, n_iterations: int = 10000, ci: int = 95) -> (float, float, str):
