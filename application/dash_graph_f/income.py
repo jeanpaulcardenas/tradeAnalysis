@@ -25,7 +25,7 @@ class IncomeGraph:
         return fig
 
     def _layout(self, metric) -> dict:
-        """Creates layout for a plot. This one is specifically created for a scatter plot"""
+        """Creates layout  dict for a plot. This one is specifically created for a plotly scatter plot"""
         return dict(template="plotly_dark",
                     showlegend=True,
                     title=dict(
@@ -47,17 +47,11 @@ class IncomeGraph:
                     ))
 
     def _create_dataframes(self, choice: str) -> list[pd.DataFrame]:
-        choices = {
-            0: [self.df],
-            'order_type': [self.df[self.df.order_type == order_type].reset_index(drop=True)
-                           for order_type in order_types],
-            'symbol': [self.df[self.df.symbol == pair_symbol].reset_index(drop=True)
-                       for pair_symbol in self.df['symbol'].unique()],
-            'day_of_week': [self.df[self.df.day_of_week == day].reset_index(drop=True)
-                            for day in self.df['day_of_week'].unique()],
-        }
         try:
-            return choices[choice]
+            if choice == 0:
+                return [self.df]
+            elif choice in METRICS_DF_KEYS:
+                return [self.df[self.df[choice] == item].reset_index(drop=True) for item in self.df[choice].unique()]
         except KeyError:
             logger.error(f"Error. choice for IncomeGraph {choice} not valid")
             return [pd.DataFrame()]
@@ -89,6 +83,8 @@ class IncomeGraph:
 
 
 class BarGraph:
-    def __init__(self, metrics_obj: Metrics, choice: str):
+    def __init__(self, metrics_obj: Metrics, choice: str, period: str):
         self.metrics = metrics_obj
         self.choice = choice
+        self.period = period
+
