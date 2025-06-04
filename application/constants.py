@@ -20,6 +20,8 @@ DOW = {
     6: 'sunday'
 }
 
+PLOTLY_GRAPH_TEMPLATE = 'plotly_dark'
+
 METRICS_DROPDOWN_OPTIONS = [
     {'label': 'Income (in acct currency)', 'value': 'profit'},
     {'label': 'PIPs', 'value': 'pips'}
