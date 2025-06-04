@@ -13,7 +13,7 @@ class IncomeGraph:
         self.df = self.metrics_ob.df
         self.choice = choice
 
-    def get_figure(self, column):
+    def get_figure(self, column: str) -> go.Figure:
         """Returns a scatter plot figure. Plots are dependant on self.choice"""
         fig = go.Figure(layout=self._layout(column))
         objs = self._create_dataframes(choice=self.choice)
@@ -26,7 +26,7 @@ class IncomeGraph:
 
     def _layout(self, metric) -> dict:
         """Creates layout  dict for a plot. This one is specifically created for a plotly scatter plot"""
-        return dict(template="plotly_dark",
+        return dict(template=PLOTLY_GRAPH_TEMPLATE,
                     showlegend=True,
                     title=dict(
                         text='accumulative income', x=0.5,
@@ -94,7 +94,7 @@ class BarGraph:
         return dict(
             height=700,
             barmode='relative',
-            template="plotly_dark",
+            template=PLOTLY_GRAPH_TEMPLATE,
             title=dict(
                 text=f'Income by period', x=0.5,
                 font=dict(
@@ -116,15 +116,17 @@ class BarGraph:
             ))
 
     def _crate_dataframe(self):
+        """Create grouped dataframe with columns df[column].unique() and their values are profit and the
+        frequency is grouped by 'self.period' close_date."""
         dataframe = self.metrics.income_by_period(column=self.choice, frequency=self.period)
 
         return dataframe
 
-    def add_bar_plot(self):
+    def add_bar_plot(self) -> go.Figure:
+        """Creates the bar plot with init arguments."""
         fig = go.Figure(layout=self._bar_fig_layout())
         dataframe = self._crate_dataframe()
         for item in dataframe.columns:
-            print(item)
             fig.add_bar(
                 name=item,
                 x=dataframe.index,
@@ -132,3 +134,4 @@ class BarGraph:
             )
 
         return fig
+
