@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+import plotly.express.colors as pxc
 
 load_dotenv()
 
@@ -22,14 +23,16 @@ DOW = {
 
 PLOTLY_GRAPH_TEMPLATE = 'plotly_dark'
 
+PLOTLY_GRAPH_COLORS = pxc.qualitative.Light24[1:]
+PLOTLY_GRAPH_COLORS.insert(1, pxc.qualitative.Light24[0])
+SUNBURST_PATH = ['won_lost', 'order_type', 'day_of_week', 'symbol']
+
 METRICS_DROPDOWN_OPTIONS = [
     {'label': 'Income (in acct currency)', 'value': 'profit'},
     {'label': 'PIPs', 'value': 'pips'}
 ]
 
 BARS_DROPDOWN_OPTIONS = [
-    {'label': 'Day', 'value': 'D'},
-    {'label': 'Weekly', 'value': 'W'},
     {'label': 'Monthly', 'value': 'ME'},
     {'label': 'Annual', 'value': 'YE'}
 ]
