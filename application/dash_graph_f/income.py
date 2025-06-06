@@ -130,6 +130,22 @@ class ScatterGraph:
             )))
 
 
+class TimeOpenIncome(ScatterGraph):
+    def __init__(self, metrics_obj, choice, pips, title):
+        super(TimeOpenIncome, self).__init__(metrics_obj, choice, pips, title)
+
+    def get_figure(self) -> go.Figure:
+        """Returns a scatter plot figure. Plots are dependant on self.choice"""
+        objs = self._create_dataframes(choice=self.choice)
+        for i, df in enumerate(objs):
+            name = self._get_legend_name(df=df)
+            x = df['time_opened'].to_list()
+            y = df[self.measure].to_list()
+            self._add_scatter_plot(name=name, x=x, y=y, idx=i, mode='markers+text')
+
+        return self.fig
+
+
 class BarGraph:
     def __init__(self, metrics_obj: Metrics, choice: str, period: str):
         self.metrics = metrics_obj
