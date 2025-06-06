@@ -8,46 +8,73 @@ import plotly.express as px
 logger = get_logger(__name__)
 
 
-class IncomeGraph:
-    def __init__(self, metrics_object: Metrics, choice: str):
-        self.metrics_ob = metrics_object
-        self.df = self.metrics_ob.df
-        self.choice = choice
+class ScatterGraph:
+    def __init__(self, metrics_obj: Metrics, choice: str, pips: bool, title: str):
+        self._measure = 'pips' if pips else 'profit'
+        self._metrics_obj = metrics_obj
+        self._df = self.metrics_obj.df
+        self._choice = choice
+        self._fig = go.Figure()
+        self.fig.update_layout(self._layout(title))
 
-    def get_figure(self, column: str) -> go.Figure:
+    @property
+    def metrics_obj(self) -> Metrics:
+        """Returns metrics object."""
+        return self._metrics_obj
+
+    @property
+    def df(self) -> pd.DataFrame:
+        """Returns dataframe used in the plotting."""
+        return self._df
+
+    @property
+    def choice(self) -> str:
+        """Returns choice selection."""
+        return self._choice
+
+    @property
+    def fig(self) -> go.Figure:
+        """Returns figure."""
+        return self._fig
+
+    @property
+    def measure(self) -> str:
+        """Returns measure type, it will be 'pips' if pips argument is true, else 'profit'"""
+        return self._measure
+
+    def get_figure(self) -> go.Figure:
         """Returns a scatter plot figure. Plots are dependant on self.choice"""
-        fig = go.Figure(layout=self._layout(column))
         objs = self._create_dataframes(choice=self.choice)
         for i, df in enumerate(objs):
             name = self._get_legend_name(df=df)
             x = [df.open_time[0]] + df.close_time.to_list()
-            y = [0] + df[column].cumsum().to_list()
-            IncomeGraph._add_scatter_plot(fig, name, x, y, i)
-            IncomeGraph._add_final_markers(fig, i, name)
+            y = [0] + df[self.measure].cumsum().to_list()
+            self._add_scatter_plot(name=name, x=x, y=y, idx=i, mode='lines+markers')
+            self._add_final_markers(idx=i, name=name)
+        return self.fig
 
-        return fig
-
-    def _layout(self, metric) -> dict:
+    def _layout(self, title, **kwargs) -> dict:
         """Creates layout  dict for a plot. This one is specifically created for a plotly scatter plot"""
         return dict(template=PLOTLY_GRAPH_TEMPLATE,
                     showlegend=True,
                     title=dict(
-                        text='accumulative income', x=0.5,
+                        text=title,
+                        x=0.5,
                         font=dict(
                             color="#2C74B3",
                             family="sans-serif",
                             size=34
                         )
                     ),
-
                     yaxis=dict(
-                        griddash="solid",
-                        zerolinecolor="rgba(120, 120, 120, 0.5)",
-                        ticksuffix=self.metrics_ob.currency_symbol if metric == 'profit' else None,
+                        griddash='solid',
+                        zerolinecolor=COLORS['translucent_grey'],
+                        ticksuffix=' ' + self.metrics_obj.currency_symbol if self.measure == 'profit' else None,
                         tickformat=',d',
                         ticklabelposition='outside right',
                         separatethousands=True,
-                    ))
+                    ),
+                    **kwargs)
 
     def _create_dataframes(self, choice: str) -> list[pd.DataFrame]:
         """returns dataframes for the given choice. e.g. if choice == pairs, returns a dataframe for each unique pair
@@ -70,30 +97,30 @@ class IncomeGraph:
             name = "All trades"
         return name
 
-    @staticmethod
-    def _add_final_markers(fig: go.Figure, idx: int, name):
+    def _add_final_markers(self, idx: int, name):
+        """Adds final marker's text, introducing a new x y value trace to figure. **kwargs are pass to fig.add_trace"""
         idx = idx * 2
-        last_date = fig.data[idx].x[-1]
-        last_cuml = fig.data[idx].y[-1]
-        fig.add_trace(go.Scatter(
+        last_date = self.fig.data[idx].x[-1]
+        last_cuml = self.fig.data[idx].y[-1]
+        self.fig.add_trace(go.Scatter(
             x=[last_date],
             y=[last_cuml],
             mode='text',
             textposition='middle right',
             texttemplate='   %{y}',
             showlegend=False,
-            legendgroup=name
+            legendgroup=name,
         ))
 
-    @staticmethod
-    def _add_scatter_plot(fig: go.Figure, name: str, x: list[float], y: list[float], idx: int):
-        fig.add_trace(go.Scatter(
+    def _add_scatter_plot(self, name: str, x: list[float], y: list[float], idx: int, mode):
+        """Adds scatter plot to fig."""
+        self.fig.add_trace(go.Scatter(
             name=name,
             showlegend=True,
             legendgroup=name,
             x=x,
             y=y,
-            mode='lines+markers',
+            mode=mode,
             textposition='top right',
             texttemplate='%{y}',
             line=dict(
@@ -143,18 +170,21 @@ class BarGraph:
 
         return dataframe
 
-    def add_bar_plot(self) -> go.Figure:
+    def get_figure(self) -> go.Figure:
         """Creates the bar plot with init arguments."""
         fig = go.Figure(layout=self._bar_fig_layout())
         dataframe = self._crate_dataframe()
-        for item in dataframe.columns:
+        for idx, item in enumerate(dataframe.columns):
             fig.add_bar(
                 name=item,
                 x=dataframe.index,
                 y=dataframe[item],
                 textposition='inside',
-                textfont_size=[6, 20],
-                texttemplate='%{y:,}',
+                textangle=0,
+                marker=dict(
+                    color=PLOTLY_GRAPH_COLORS[idx]
+                ),
+                texttemplate='%{y:,.0f} ' + self.metrics.currency_symbol,
                 insidetextfont=dict(
                     color=COLORS['white']
                 )
@@ -211,5 +241,4 @@ class SunBurst:
         layout = SunBurst.update_layout()
         fig.update_layout(layout)
         return fig
-
 
