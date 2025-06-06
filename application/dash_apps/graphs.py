@@ -2,7 +2,7 @@ from dash import dash, dcc, html, callback
 from dash.dependencies import Input, Output
 from application.config import get_logger
 from application.statistics import Metrics
-from application.dash_graph_f.income import IncomeGraph, BarGraph
+from application.dash_graph_f.income import IncomeGraph, BarGraph, SunBurst
 from application.random_df_generator import RandDataGen
 from application.constants import INCOME_DROPDOWN_OPTIONS, BARS_DROPDOWN_OPTIONS, METRICS_DROPDOWN_OPTIONS
 from application.helpers import metrics_between_dates
@@ -64,10 +64,12 @@ def app_layout(start_date, end_date):
 
         dcc.Dropdown(
             options=BARS_DROPDOWN_OPTIONS,
-            value=0,
+            value='YE',
             id='bars dropdown'
         ),
-        dcc.Graph(id='bars graph')
+        dcc.Graph(id='bars graph'),
+        html.Br(),
+        dcc.Graph(id='sunburst')
     ])
 
     return layout
@@ -75,7 +77,8 @@ def app_layout(start_date, end_date):
 
 @callback(
     [Output('income graph', 'figure'),
-     Output('bars graph', 'figure')],
+     Output('bars graph', 'figure'),
+     Output('sunburst', 'figure')],
     [Input('metric dropdown', 'value'),
      Input('date range', 'start_date'),
      Input('date range', 'end_date'),
@@ -85,7 +88,8 @@ def update_charts(metric, start_date, end_date, inc_choice, bars_choice):
     metrics_obj = metrics_between_dates(random_metric, start_date=start_date, end_date=end_date)
     income_graph = IncomeGraph(metrics_object=metrics_obj, choice=inc_choice).get_figure(metric)
     bars_graph = BarGraph(metrics_obj=metrics_obj, choice=inc_choice, period=bars_choice).add_bar_plot()
-    return [income_graph, bars_graph]
+    sunburst = SunBurst(metrics_obj).get_figure()
+    return [income_graph, bars_graph, sunburst]
 
 
 if __name__ == '__main__':
