@@ -3,6 +3,7 @@ from application.constants import *
 from application.config import get_logger
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
 
 logger = get_logger(__name__)
 
@@ -22,6 +23,8 @@ class IncomeGraph:
             x = [df.open_time[0]] + df.close_time.to_list()
             y = [0] + df[column].cumsum().to_list()
             IncomeGraph._add_scatter_plot(fig, name, x, y, i)
+            IncomeGraph._add_final_markers(fig, i, name)
+
         return fig
 
     def _layout(self, metric) -> dict:
@@ -47,22 +50,40 @@ class IncomeGraph:
                     ))
 
     def _create_dataframes(self, choice: str) -> list[pd.DataFrame]:
+        """returns dataframes for the given choice. e.g. if choice == pairs, returns a dataframe for each unique pair
+        containing only data with that pair symbol."""
         try:
             if choice == 0:
                 return [self.df]
             elif choice in METRICS_DF_KEYS:
+                print(f' choice.unique(): {self.df[choice].unique()}')
                 return [self.df[self.df[choice] == item].reset_index(drop=True) for item in self.df[choice].unique()]
         except KeyError:
             logger.error(f"Error. choice for IncomeGraph {choice} not valid")
             return [pd.DataFrame()]
 
-    def _get_legend_name(self, df):
+    def _get_legend_name(self, df: pd.DataFrame) -> str:
         """Gets the corresponding legend name by user's choice (self.choice)."""
         if self.choice:
             name = df[self.choice][0]
         else:
             name = "All trades"
         return name
+
+    @staticmethod
+    def _add_final_markers(fig: go.Figure, idx: int, name):
+        idx = idx * 2
+        last_date = fig.data[idx].x[-1]
+        last_cuml = fig.data[idx].y[-1]
+        fig.add_trace(go.Scatter(
+            x=[last_date],
+            y=[last_cuml],
+            mode='text',
+            textposition='middle right',
+            texttemplate='   %{y}',
+            showlegend=False,
+            legendgroup=name
+        ))
 
     @staticmethod
     def _add_scatter_plot(fig: go.Figure, name: str, x: list[float], y: list[float], idx: int):
@@ -77,8 +98,8 @@ class IncomeGraph:
             texttemplate='%{y}',
             line=dict(
                 width=2,
-                shape="hv",
-                color=list(COLORS.values())[idx]
+                shape='linear',
+                color=PLOTLY_GRAPH_COLORS[idx]
             )))
 
 
@@ -130,8 +151,65 @@ class BarGraph:
             fig.add_bar(
                 name=item,
                 x=dataframe.index,
-                y=dataframe[item]
+                y=dataframe[item],
+                textposition='inside',
+                textfont_size=[6, 20],
+                texttemplate='%{y:,}',
+                insidetextfont=dict(
+                    color=COLORS['white']
+                )
+
             )
 
         return fig
+
+
+class SunBurst:
+    def __init__(self, metric_obj: Metrics):
+        self.metric = metric_obj
+        self.df = self.metric.df.copy()
+        self.add_won_lost_column()
+
+    @staticmethod
+    def update_layout():
+        return {
+            'width': 700,
+            'height': 700,
+            'margin': dict(autoexpand=True),
+            'showlegend': True,
+            'plot_bgcolor': "#0A2647",
+            'legend': dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="right",
+                x=0.70
+            ), 'title': dict(
+                text="Earnings sunburst", x=0.5,
+                font=dict(
+                    color="#2C74B3",
+                    family="sans-serif",
+                    size=34,
+                ))}
+
+    def _get_color_map(self) -> list[str]:
+        """Returns the correct order of ['blue', 'red'] so that won trades are always blue. To be used in get_figure."""
+        if self.metric.net_income < 0:
+            return [COLORS['red'], COLORS['blue']]
+        else:
+            return [COLORS['blue'], COLORS['red']]
+
+    def add_won_lost_column(self):
+        self.df['won_lost'] = ['Won' if won else 'Lost' for won in self.df.won_trade]
+
+    def get_figure(self) -> go.Figure:
+        """Returns a sunburst figure"""
+        color_map = self._get_color_map()
+        fig = px.sunburst(data_frame=self.df,
+                          path=SUNBURST_PATH,
+                          values=abs(self.df.profit),
+                          color_discrete_sequence=color_map)
+        layout = SunBurst.update_layout()
+        fig.update_layout(layout)
+        return fig
+
 
