@@ -28,11 +28,12 @@ PLOTLY_GRAPH_COLORS.insert(1, pxc.qualitative.Light24[0])
 SUNBURST_PATH = ['won_lost', 'order_type', 'day_of_week', 'symbol']
 
 METRICS_DROPDOWN_OPTIONS = [
-    {'label': 'Income (in acct currency)', 'value': 'profit'},
-    {'label': 'PIPs', 'value': 'pips'}
+    {'label': 'Income (in acct currency)', 'value': False},
+    {'label': 'PIPs', 'value': True}
 ]
 
 BARS_DROPDOWN_OPTIONS = [
+    {'label': 'Weekly', 'value': 'W'},
     {'label': 'Monthly', 'value': 'ME'},
     {'label': 'Annual', 'value': 'YE'}
 ]
@@ -125,16 +126,17 @@ PAIRS = {
 }
 
 COLORS = {
-    'blue': 'rgb(0,80,250)',
+    'blue': 'rgb(0, 80, 250)',
     'red': 'rgb(250, 0, 0)',
     'white': 'rgb(255, 255, 255)',
     'green': 'rgb(0, 250, 0)',
-    'yellow': 'rgb(255,255,10)',
+    'yellow': 'rgb(255, 255, 10)',
     'purple': 'rgb(110, 0, 255)',
-    'orange': 'rgb(220,125,15)',
-    'dark_red': 'rgb(120,30,30)',
-    'lightblue': 'rgb(45,250,250)',
-    'pink': 'rgb(250,90,255)'
+    'orange': 'rgb(220, 125, 15)',
+    'dark_red': 'rgb(120, 30, 30)',
+    'lightblue': 'rgb(45, 250, 250)',
+    'pink': 'rgb(250, 90, 255)',
+    'translucent_grey': 'rgba(120, 120, 120, 0.5)',
 }
 
 COLUMN_USED = {
