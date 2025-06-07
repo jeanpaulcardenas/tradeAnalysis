@@ -83,7 +83,6 @@ class ScatterGraph:
             if choice == 0:
                 return [self.df]
             elif choice in METRICS_DF_KEYS:
-                print(f' choice.unique(): {self.df[choice].unique()}')
                 return [self.df[self.df[choice] == item].reset_index(drop=True) for item in self.df[choice].unique()]
         except KeyError:
             logger.error(f"Error. choice for IncomeGraph {choice} not valid")
@@ -92,7 +91,11 @@ class ScatterGraph:
     def _get_legend_name(self, df: pd.DataFrame) -> str:
         """Gets the corresponding legend name by user's choice (self.choice)."""
         if self.choice:
-            name = df[self.choice][0]
+            try:
+                name = df[self.choice][0]
+            except KeyError:
+                name = None
+                logger.warning(f"couldn't find df[{self.choice}][0], no name given to legend")
         else:
             name = "All trades"
         return name
@@ -131,19 +134,43 @@ class ScatterGraph:
 
 
 class TimeOpenIncome(ScatterGraph):
-    def __init__(self, metrics_obj, choice, pips, title):
+    def __init__(self, metrics_obj, choice, pips, title, ceiling: int, denominator: int, period:str):
         super(TimeOpenIncome, self).__init__(metrics_obj, choice, pips, title)
+        self.ceiling = ceiling
+        self.denominator = denominator
+        self.period = period
 
     def get_figure(self) -> go.Figure:
         """Returns a scatter plot figure. Plots are dependant on self.choice"""
         objs = self._create_dataframes(choice=self.choice)
         for i, df in enumerate(objs):
             name = self._get_legend_name(df=df)
-            x = df['time_opened'].to_list()
+            df = self._filter_by_style(df)
+            x = self._get_x_values(df)
             y = df[self.measure].to_list()
-            self._add_scatter_plot(name=name, x=x, y=y, idx=i, mode='markers+text')
+            self._add_scatter_plot(name=name, x=x, y=y, idx=i, mode='markers')
+        self._update_axes()
 
         return self.fig
+
+    def _get_x_values(self, df) -> list[float]:
+        """Gets total seconds of 'time_opened' column of df and divides it by 'self.denominator'."""
+        logger.info(self.denominator)
+        return df['time_opened'].dt.total_seconds()/self.denominator
+
+    def _get_y_values(self, df: pd.DataFrame) -> list[float]:
+        """Gets the y value as a list, depends on 'measure'."""
+        return df[self.measure].to_list()
+
+    def _filter_by_style(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Filter df depending on 'time_style' ceiling"""
+        return df[df['time_opened'].dt.total_seconds() < self.ceiling]
+
+    def _update_axes(self):
+        self.fig.update_xaxes(
+            ticksuffix=self.period,
+            title='Time'
+        )
 
 
 class BarGraph:
