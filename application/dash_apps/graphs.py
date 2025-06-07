@@ -4,7 +4,8 @@ from application.config import get_logger
 from application.statistics import Metrics
 from application.dash_graph_f.income import ScatterGraph, BarGraph, SunBurst, TimeOpenIncome
 from application.random_df_generator import RandDataGen
-from application.constants import INCOME_DROPDOWN_OPTIONS, BARS_DROPDOWN_OPTIONS, METRICS_DROPDOWN_OPTIONS
+from application.constants import INCOME_DROPDOWN_OPTIONS, BARS_DROPDOWN_OPTIONS, METRICS_DROPDOWN_OPTIONS, \
+    TIME_TYPE_OPTIONS, TIME_TYPE_DICT
 from application.helpers import metrics_between_dates
 import pandas as pd
 import datetime as dt
@@ -71,6 +72,12 @@ def app_layout(start_date, end_date):
         html.Br(),
         dcc.Graph(id='sunburst'),
         html.Br(),
+        dcc.Dropdown(
+            options=TIME_TYPE_OPTIONS,
+            value='days',
+            id='time style'
+
+        ),
         dcc.Graph(id='time graph')
     ])
 
@@ -86,13 +93,28 @@ def app_layout(start_date, end_date):
      Input('date range', 'start_date'),
      Input('date range', 'end_date'),
      Input('income dropdown', 'value'),
-     Input('bars dropdown', 'value')])
-def update_charts(measure, start_date, end_date, inc_choice, bars_choice):
+     Input('bars dropdown', 'value'),
+     Input('time style', 'value')])
+def update_charts(measure, start_date, end_date, inc_choice, bars_choice, time_style):
     metrics_obj = metrics_between_dates(random_metric, start_date=start_date, end_date=end_date)
-    income_graph = ScatterGraph(metrics_obj=metrics_obj, choice=inc_choice, pips=measure, title='Cumulative Income').get_figure()
-    bars_graph = BarGraph(metrics_obj=metrics_obj, choice=inc_choice, period=bars_choice).get_figure()
+
+    income_graph = ScatterGraph(metrics_obj=metrics_obj,
+                                choice=inc_choice,
+                                pips=measure,
+                                title='Cumulative Income').get_figure()
+
+    bars_graph = BarGraph(metrics_obj=metrics_obj,
+                          choice=inc_choice,
+                          period=bars_choice).get_figure()
+
     sunburst = SunBurst(metrics_obj).get_figure()
-    time_graph = TimeOpenIncome(metrics_obj, inc_choice, measure, title='Time open vs Income').get_figure()
+
+    time_graph = TimeOpenIncome(metrics_obj=metrics_obj,
+                                choice=inc_choice,
+                                pips=measure,
+                                title='Time open vs Income',
+                                **TIME_TYPE_DICT[time_style]).get_figure()
+
     return [income_graph, bars_graph, sunburst, time_graph]
 
 
