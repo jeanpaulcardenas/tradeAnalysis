@@ -1,7 +1,6 @@
 from application.mt4data import Trade, TradeData, Balance  # noqa: F401
 from application.config import get_logger
 from application.constants import DOW, METRICS_DF_KEYS
-from dataclasses import fields
 from application.constants import CURRENCIES
 import numpy as np
 import pandas as pd
@@ -38,7 +37,6 @@ class Metrics:
         else:
             keys = METRICS_DF_KEYS
             self.df = pd.DataFrame(columns=keys)
-        print(self.df.to_string())
 
     @classmethod
     def from_trade_data(cls, trade_data: TradeData):
@@ -292,7 +290,7 @@ class Metrics:
             return pd.DataFrame()
 
         grouped_df = df.groupby(pd.Grouper(key='close_time', freq=frequency)).sum()
-        logger.info(f"This is the grouped df:\n {grouped_df}")
+        logger.info(f"This is the grouped df:\n {grouped_df.head()}")
         return grouped_df
 
     @staticmethod
