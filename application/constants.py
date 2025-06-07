@@ -27,6 +27,17 @@ PLOTLY_GRAPH_COLORS = pxc.qualitative.Light24[1:]
 PLOTLY_GRAPH_COLORS.insert(1, pxc.qualitative.Light24[0])
 SUNBURST_PATH = ['won_lost', 'order_type', 'day_of_week', 'symbol']
 
+TIME_TYPE_OPTIONS = [
+    {'label': 'Swing', 'value':  'days'},
+    {'label': 'Intraday', 'value': 'hours'},
+    {'label': 'Scalping', 'value': 'minutes'}
+]
+TIME_TYPE_DICT = {
+    'days': {'period': 'days', 'denominator': 60*60*24, 'ceiling': 10**10},
+    'hours': {'period': 'hours', 'denominator': 3600, 'ceiling': 60*60*24},
+    'minutes': {'period': 'minutes', 'denominator': 60, 'ceiling': 15*60}
+}
+
 METRICS_DROPDOWN_OPTIONS = [
     {'label': 'Income (in acct currency)', 'value': False},
     {'label': 'PIPs', 'value': True}
