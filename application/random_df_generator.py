@@ -22,11 +22,13 @@ options = ['buy', 'sell']
 
 
 class RandDataGen:
-    def __init__(self, number_of_trades: int, currency: str = 'EUR'):
+    def __init__(self, number_of_trades: int, max_weeks_total: int, max_weeks_per_trade: int, currency: str = 'EUR'):
         self.n_trades = number_of_trades
         self._currency = currency
         self._data_dict = self.rand_init_data()
         self.update_data()
+        self.mw_total = max_weeks_total
+        self.mw_trade = max_weeks_per_trade
         self._df = pd.DataFrame(self.data_dict)
 
     def rand_init_data(self) -> dict:
@@ -35,7 +37,7 @@ class RandDataGen:
             'symbol': [random.choice(PAIRS) for _ in range(self.n_trades)],
             'volume': [round(random.randint(1, 10) / 10, 2) for _ in range(self.n_trades)],
             'order_type': [random.choice(options) for _ in range(self.n_trades)],
-            'open_time': [RandDataGen._random_future(start, 54) for _ in range(self.n_trades)]
+            'open_time': [RandDataGen._random_future(start, self.mw_total) for _ in range(self.n_trades)]
         }
         return data
 
@@ -63,7 +65,7 @@ class RandDataGen:
         'commission', 'taxes', 'swap', 'base', 'quote'"""
         zeros_list = [0 for _ in range(self.n_trades)]
         self.data_dict['order'] = [1000 + i for i in range(self.n_trades)]
-        self.data_dict['close_time'] = [RandDataGen._random_future(open_time, 16)
+        self.data_dict['close_time'] = [RandDataGen._random_future(open_time, self.mw_trade)
                                         for open_time in self.data_dict['open_time']]
 
         self.data_dict['open_price'] = [RandDataGen._random_pair_price(pair) for pair in self.data_dict['symbol']]
@@ -102,7 +104,7 @@ class RandDataGen:
         date = dt.datetime.now()
         while week_day:
             val = dt.timedelta(
-                weeks=random.randint(0, max_weeks - 1),
+                weeks=random.randint(0, max_weeks),
                 days=random.randint(0, 6),
                 hours=random.randint(0, 23),
                 seconds=random.randint(0, 3599))
@@ -146,7 +148,7 @@ class RandDataGen:
 
 
 if __name__ == '__main__':
-    test = RandDataGen(50)
+    test = RandDataGen(100, max_weeks_total=54, max_weeks_per_trade=1)
     with open('./cached_random_df.pkl', 'wb') as f:
         pickle.dump(test, f)
     print(test.df.to_string())
