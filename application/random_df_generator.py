@@ -24,11 +24,11 @@ options = ['buy', 'sell']
 class RandDataGen:
     def __init__(self, number_of_trades: int, max_weeks_total: int, max_weeks_per_trade: int, currency: str = 'EUR'):
         self.n_trades = number_of_trades
+        self.mw_total = max_weeks_total
+        self.mw_trade = max_weeks_per_trade
         self._currency = currency
         self._data_dict = self.rand_init_data()
         self.update_data()
-        self.mw_total = max_weeks_total
-        self.mw_trade = max_weeks_per_trade
         self._df = pd.DataFrame(self.data_dict)
 
     def rand_init_data(self) -> dict:
