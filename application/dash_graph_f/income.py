@@ -1,6 +1,5 @@
 from application.data.statistics import Metrics
 from application.constants import *
-from application.config import get_logger
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
