@@ -149,7 +149,7 @@ class RandDataGen:
 
 if __name__ == '__main__':
     test = RandDataGen(100, max_weeks_total=54, max_weeks_per_trade=1)
-    with open('./cached_random_df.pkl', 'wb') as f:
+    with open('../cached_data/cached_random_df.pkl', 'wb') as f:
         pickle.dump(test, f)
     print(test.df.to_string())
     print(test.df.dtypes)
