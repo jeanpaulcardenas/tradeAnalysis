@@ -1,19 +1,18 @@
 from dash import dash, dcc, html, callback
 from dash.dependencies import Input, Output
 from application.config import get_logger
-from application.statistics import Metrics
+from application.data.statistics import Metrics, metrics_between_dates
 from application.dash_graph_f.income import ScatterGraph, BarGraph, SunBurst, TimeOpenIncome
-from application.random_df_generator import RandDataGen
 from application.constants import INCOME_DROPDOWN_OPTIONS, BARS_DROPDOWN_OPTIONS, METRICS_DROPDOWN_OPTIONS, \
     TIME_TYPE_OPTIONS, TIME_TYPE_DICT
-from application.helpers import metrics_between_dates
+from application.data.random_df_generator import RandDataGen
 import pandas as pd
 import datetime as dt
 import pickle
 
 app = dash.Dash()
 logger = get_logger(__name__)
-with open('../cached_random_df.pkl', 'rb') as f:
+with open('../cached_data/cached_random_df.pkl', 'rb') as f:
     rand_data = pickle.load(f)
     random_metric = Metrics(rand_data.df, pd.DataFrame(), rand_data.currency)
     rand_df = random_metric.df
