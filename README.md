@@ -11,16 +11,17 @@ trading performance.
 - Upload MT4 trading history reports and parse trades & balances
 - Calculate key trading metrics (win rate, net income, expectancy, trade efficiency, and more)
 - Visualize trading performance with interactive Dash/Plotly charts
-- Unique feature: Analyze max/min price movement between trade open/close (using TraderMade API) to evaluate trade efficiency
+- Analyze max/min price movement between trade open/close times (using TraderMade API) to evaluate trade efficiency
 - Filter and group metrics by symbol, order type, day of week, and more
-- Future-ready for multi-user support and persistent data storage
 
 ---
 
 ## Screenshots
 
 ![Alt text](./application/screenshots/trade_analysis_first.png?raw=true "Graphs example 1")
-![Alt text](./application/screenshots/graphs.gif?raw=true "Graphs example 1")
+![](https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNzdicjM1dnFwdWMyOWRuOWUxdzg5bTB6YTZ3YTQ4a2dibXBlZzJ4eiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ylmPcsguQ8rBe1NitK/giphy.gif)
+![](https://imgur.com/9Wn9rHy.gif)
+![](https://imgur.com/lHQ46ZB.gif)
 
 ---
 
@@ -106,6 +107,9 @@ Contributions and suggestions are welcome! Please open an issue or pull request.
 ## Roadmap / TODO
 
 - [ ] Add database support for user metrics and trade caching
+- [ ] Add a dash page displaying tables with valuable metrics information
+- [ ] Add a load file feature to load the MT4 file
+- [ ] Create a 'generate random data' button to generate random trade files for those who don't possess a MT4 account
 - [ ] Improve user interface and error handling
 - [ ] Add authentication for multiple users
 - [ ] Write unit tests for core modules
