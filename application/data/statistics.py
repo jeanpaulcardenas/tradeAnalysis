@@ -1,13 +1,14 @@
-from application.mt4data import Trade, TradeData, Balance  # noqa: F401
+from application.data.mt4data import Trade, TradeData, Balance  # noqa: F401
 from application.config import get_logger
 from application.constants import DOW, METRICS_DF_KEYS
 from application.constants import CURRENCIES
+import datetime as dt
 import numpy as np
 import pandas as pd
 import pickle
 
 if __name__ == '__main__':
-    with open('cached_trade_data.pkl', 'rb') as f:
+    with open('../cached_data/cached_trade_data.pkl', 'rb') as f:
         test_trade_data = pickle.load(f)
 
 logger = get_logger(__name__)
@@ -338,6 +339,13 @@ class Metrics:
             return round(maxim, 2) > round(actual, 2)
         else:
             return round(maxim, 2) < round(actual, 2)
+
+
+def metrics_between_dates(metrics_obj: Metrics, start_date: dt.datetime, end_date: dt.datetime) -> Metrics:
+    """Returns a metric object from a metric object given a start date and end date to filter."""
+    df = metrics_obj.df
+    df_ranged = df[(df['open_time'] >= start_date) & (df['close_time'] <= end_date)].reset_index(drop=True)
+    return Metrics(df_ranged, pd.DataFrame(), metrics_obj.currency)
 
 
 if __name__ == '__main__':
