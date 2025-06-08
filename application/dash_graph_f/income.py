@@ -134,7 +134,7 @@ class ScatterGraph:
 
 
 class TimeOpenIncome(ScatterGraph):
-    def __init__(self, metrics_obj, choice, pips, title, ceiling: int, denominator: int, period:str):
+    def __init__(self, metrics_obj, choice, pips, title, ceiling: int, denominator: int, period: str):
         super(TimeOpenIncome, self).__init__(metrics_obj, choice, pips, title)
         self.ceiling = ceiling
         self.denominator = denominator
@@ -147,7 +147,7 @@ class TimeOpenIncome(ScatterGraph):
             name = self._get_legend_name(df=df)
             df = self._filter_by_style(df)
             x = self._get_x_values(df)
-            y = df[self.measure].to_list()
+            y = self._get_y_values(df)
             self._add_scatter_plot(name=name, x=x, y=y, idx=i, mode='markers')
         self._update_axes()
 
@@ -156,7 +156,9 @@ class TimeOpenIncome(ScatterGraph):
     def _get_x_values(self, df) -> list[float]:
         """Gets total seconds of 'time_opened' column of df and divides it by 'self.denominator'."""
         logger.info(self.denominator)
-        return df['time_opened'].dt.total_seconds()/self.denominator
+        series = df['time_opened'].dt.total_seconds()/self.denominator
+        series = series.apply(lambda x: round(x, 1))
+        return series.to_list()
 
     def _get_y_values(self, df: pd.DataFrame) -> list[float]:
         """Gets the y value as a list, depends on 'measure'."""
@@ -168,8 +170,8 @@ class TimeOpenIncome(ScatterGraph):
 
     def _update_axes(self):
         self.fig.update_xaxes(
-            ticksuffix=self.period,
-            title='Time'
+            ticksuffix=f' {self.period}',
+            title='Time',
         )
 
 
@@ -280,8 +282,8 @@ class SunBurst:
         fig = px.sunburst(data_frame=self.df,
                           path=SUNBURST_PATH,
                           values=abs(self.df.profit),
-                          color_discrete_sequence=color_map)
+                          color_discrete_sequence=color_map,
+                          )
         layout = SunBurst.update_layout()
         fig.update_layout(layout)
         return fig
-
