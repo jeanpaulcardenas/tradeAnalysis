@@ -1,6 +1,5 @@
 import datetime
 from application.constants import *
-from application.config import get_logger
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
 import datetime as dt
