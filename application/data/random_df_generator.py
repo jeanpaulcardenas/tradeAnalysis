@@ -1,4 +1,4 @@
-from application.config import get_logger
+from application.constants import get_logger
 import pandas as pd
 import random
 import datetime as dt
@@ -149,7 +149,7 @@ class RandDataGen:
 
 if __name__ == '__main__':
     test = RandDataGen(100, max_weeks_total=54, max_weeks_per_trade=1)
-    with open('../cached_data/cached_random_df.pkl', 'wb') as f:
-        pickle.dump(test, f)
+    with open('../cached_data/cached_random_dict.pkl', 'wb') as f:
+        pickle.dump(test.df.to_dict(), f)
     print(test.df.to_string())
     print(test.df.dtypes)
