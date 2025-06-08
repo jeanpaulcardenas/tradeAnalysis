@@ -1,7 +1,5 @@
 from application.data.mt4data import Trade, TradeData, Balance  # noqa: F401
-from application.config import get_logger
-from application.constants import DOW, METRICS_DF_KEYS
-from application.constants import CURRENCIES
+from application.constants import DOW, METRICS_DF_KEYS, CURRENCIES, get_logger
 import datetime as dt
 import numpy as np
 import pandas as pd
