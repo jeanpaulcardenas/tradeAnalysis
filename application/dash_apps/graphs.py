@@ -77,7 +77,9 @@ def app_layout(start_date, end_date):
             id='time style'
 
         ),
-        dcc.Graph(id='time graph')
+        dcc.Graph(id='time graph'),
+        html.Br(),
+        html.Br()
     ])
 
     return layout
