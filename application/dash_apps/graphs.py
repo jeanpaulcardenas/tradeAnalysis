@@ -1,21 +1,21 @@
 from dash import dash, dcc, html, callback
 from dash.dependencies import Input, Output
-from application.config import get_logger
 from application.data.statistics import Metrics, metrics_between_dates
 from application.dash_graph_f.income import ScatterGraph, BarGraph, SunBurst, TimeOpenIncome
 from application.constants import INCOME_DROPDOWN_OPTIONS, BARS_DROPDOWN_OPTIONS, METRICS_DROPDOWN_OPTIONS, \
-    TIME_TYPE_OPTIONS, TIME_TYPE_DICT
-from application.data.random_df_generator import RandDataGen
+    TIME_TYPE_OPTIONS, TIME_TYPE_DICT, get_logger
 import pandas as pd
 import datetime as dt
 import pickle
 
-app = dash.Dash()
-logger = get_logger(__name__)
-with open('../cached_data/cached_random_df.pkl', 'rb') as f:
+with open('application/cached_data/cached_random_dict.pkl', 'rb') as f:
     rand_data = pickle.load(f)
-    random_metric = Metrics(rand_data.df, pd.DataFrame(), rand_data.currency)
-    rand_df = random_metric.df
+
+random_metric = Metrics(pd.DataFrame(rand_data), pd.DataFrame(), 'USD')
+rand_df = random_metric.df
+app = dash.Dash()
+
+logger = get_logger(__name__)
 
 
 def set_start_end_dates(base_df: pd.DataFrame) -> tuple[dt.datetime, dt.datetime]:
@@ -85,6 +85,10 @@ def app_layout(start_date, end_date):
     return layout
 
 
+start, end = set_start_end_dates(rand_df)
+app.layout = app_layout(start_date=start, end_date=end)
+
+
 @callback(
     [Output('income graph', 'figure'),
      Output('bars graph', 'figure'),
@@ -97,6 +101,7 @@ def app_layout(start_date, end_date):
      Input('bars dropdown', 'value'),
      Input('time style', 'value')])
 def update_charts(measure, start_date, end_date, inc_choice, bars_choice, time_style):
+
     metrics_obj = metrics_between_dates(random_metric, start_date=start_date, end_date=end_date)
 
     income_graph = ScatterGraph(metrics_obj=metrics_obj,
@@ -119,7 +124,3 @@ def update_charts(measure, start_date, end_date, inc_choice, bars_choice, time_s
     return [income_graph, bars_graph, sunburst, time_graph]
 
 
-if __name__ == '__main__':
-    start, end = set_start_end_dates(rand_df)
-    app.layout = app_layout(start_date=start, end_date=end)
-    app.run(debug=True)
