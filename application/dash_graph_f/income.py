@@ -284,6 +284,9 @@ class SunBurst:
                           values=abs(self.df.profit),
                           color_discrete_sequence=color_map,
                           )
+        fig.update_traces(
+            hovertemplate=f'<b>%{{label}}</b><br>Sales: %{{value}} {self.metric.currency_symbol}<extra></extra>'
+        )
         layout = SunBurst.update_layout()
         fig.update_layout(layout)
         return fig
