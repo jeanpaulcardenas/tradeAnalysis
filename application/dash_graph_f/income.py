@@ -1,4 +1,4 @@
-from application.statistics import Metrics
+from application.data.statistics import Metrics
 from application.constants import *
 from application.config import get_logger
 import pandas as pd
