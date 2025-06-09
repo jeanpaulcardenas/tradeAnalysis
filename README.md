@@ -66,13 +66,19 @@ python -m run
 
 ```
 TradeAnalysis/
-    constants.py         # Shared constants, dropdown options, color settings
-    mt4data.py           # Data parsing and trade/balance model classes
-    statistics.py        # Metrics calculation and analysis logic
-    dash_apps/
-        graphs.py        # Dash app and graph layouts
-    dash_graph_f/
-        income.py        # Graph generation classes (Scatter, Bar, Sunburst, etc.)
+    dash_apps.py/                   # All dash apps
+        graphs.py                   # Graphs page generation (dash app)
+    dash_graph_f.py/                # All classes and funcitons used to create graphs in Dash framework
+        income.py                   # all classes dealing with real profit and PIPS
+    data/                           # All data files (all .pkl .log will be created here)
+        statement.txt               # A mt4 earnings report file example
+    data_classes/                   # Contains parsing, data creation and metrics classes
+        mt4data.py                  # Parsing classes
+        random_df_generator.py      # Class generating a dataframe containing all data needed to create a metrics object
+        statistics.py               # Metrics class. Obtains metrics and dataframes displayed in dash apps
+    config.py                       # global variables
+    requirements.txt                # requirements
+    run.py                          # running module
 ...
 ```
 
@@ -80,8 +86,7 @@ TradeAnalysis/
 
 ## Testing
 
-Basic tests for data parsing and metrics will be added.  
-(To run tests, use `pytest` after writing test files.)
+Basic tests for data parsing and metrics will be added
 
 ---
 
@@ -93,7 +98,7 @@ Contributions and suggestions are welcome! Please open an issue or pull request.
 
 ## License
 
-[MIT License](LICENSE)
+[//]: # ([MIT License]&#40;LICENSE&#41;)
 
 ---
 
@@ -112,4 +117,4 @@ Contributions and suggestions are welcome! Please open an issue or pull request.
 - [ ] Improve user interface and error handling
 - [ ] Add authentication for multiple users
 - [ ] Write unit tests for core modules
-- [ ] Deploy app online (Heroku, Render, etc.)
+- [ ] Deploy app online
