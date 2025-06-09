@@ -68,10 +68,10 @@ python -m run
 TradeAnalysis/
     dash_apps.py/                   # All dash apps
         graphs.py                   # Graphs page generation (dash app)
-    dash_graph_f.py/                # All classes and funcitons used to create graphs in Dash framework
-        income.py                   # all classes dealing with real profit and PIPS
+    dash_graph_f/                   # All classes and functions used to create graphs in Dash framework
+        income.py                   # all classes returning dash figures with real profit and PIPS and data
     data/                           # All data files (all .pkl .log will be created here)
-        statement.txt               # A mt4 earnings report file example
+        statement.txt               # An example MT4 earnings report file
     data_classes/                   # Contains parsing, data creation and metrics classes
         mt4data.py                  # Parsing classes
         random_df_generator.py      # Class generating a dataframe containing all data needed to create a metrics object
