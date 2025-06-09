@@ -1,14 +1,14 @@
 from dash import dash, dcc, html, callback
 from dash.dependencies import Input, Output
-from application.data.statistics import Metrics, metrics_between_dates
-from application.dash_graph_f.income import ScatterGraph, BarGraph, SunBurst, TimeOpenIncome
-from application.constants import INCOME_DROPDOWN_OPTIONS, BARS_DROPDOWN_OPTIONS, METRICS_DROPDOWN_OPTIONS, \
+from data_classes.statistics import Metrics, metrics_between_dates
+from dash_graph_f.income import ScatterGraph, BarGraph, SunBurst, TimeOpenIncome
+from config import INCOME_DROPDOWN_OPTIONS, BARS_DROPDOWN_OPTIONS, METRICS_DROPDOWN_OPTIONS, \
     TIME_TYPE_OPTIONS, TIME_TYPE_DICT, get_logger
 import pandas as pd
 import datetime as dt
 import pickle
 
-with open('application/cached_data/cached_random_dict.pkl', 'rb') as f:
+with open('./data/cached_random_dict.pkl', 'rb') as f:
     rand_data = pickle.load(f)
 
 random_metric = Metrics(pd.DataFrame(rand_data), pd.DataFrame(), 'USD')

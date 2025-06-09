@@ -1,5 +1,5 @@
 import datetime
-from application.constants import *
+from config import *
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
 import datetime as dt
@@ -520,7 +520,7 @@ class TraderMadeClient:
             logger.info(f'quotes not in response {data}')
             return pd.DataFrame()
 
-        df = pd.DataFrame(data["quotes"]["data"], columns=data["quotes"]["columns"])
+        df = pd.DataFrame(data["quotes"]["data_classes"], columns=data["quotes"]["columns"])
         if fields:
             try:
                 df = df[["date"] + fields]
@@ -549,7 +549,7 @@ class TraderMadeClient:
 
 
 if __name__ == '__main__':
-    aux = TxtParser.from_filepath('../statement.txt')
+    aux = TxtParser.from_filepath('../data/statement.txt')
     operations_infonow = aux.get_operations_info()
     now = TradeData(aux)
 
@@ -558,5 +558,5 @@ if __name__ == '__main__':
     one_months = datetime.timedelta(days=3)
     tm_client.complete_trade_high_low(now.trades)
     print(now.forex_trades)
-    with open("../cached_data/cached_trade_data.pkl", "wb") as f:
+    with open("../data/cached_trade_data.pkl", "wb") as f:
         pickle.dump(now, f)

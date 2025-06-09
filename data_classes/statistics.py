@@ -1,12 +1,12 @@
-from application.data.mt4data import Trade, TradeData, Balance  # noqa: F401
-from application.constants import DOW, METRICS_DF_KEYS, CURRENCIES, get_logger
+from data_classes.mt4data import Trade, TradeData, Balance  # noqa: F401
+from config import DOW, METRICS_DF_KEYS, CURRENCIES, get_logger
 import datetime as dt
 import numpy as np
 import pandas as pd
 import pickle
 
 if __name__ == '__main__':
-    with open('../cached_data/cached_trade_data.pkl', 'rb') as f:
+    with open('../data/cached_trade_data.pkl', 'rb') as f:
         test_trade_data = pickle.load(f)
 
 logger = get_logger(__name__)

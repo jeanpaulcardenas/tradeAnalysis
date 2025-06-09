@@ -3,8 +3,6 @@ import plotly.express.colors as pxc
 import logging
 import os
 
-# Get the root path dynamically, relative to this config.py file
-
 DEBUG = False
 
 
@@ -15,7 +13,7 @@ def get_logger(name: str) -> logging.Logger:
 
         formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
 
-        file_handler = logging.FileHandler('./test.log', mode='w')
+        file_handler = logging.FileHandler('./data/test.log', mode='w')
         file_handler.setFormatter(formatter)
 
         console_handler = logging.StreamHandler()

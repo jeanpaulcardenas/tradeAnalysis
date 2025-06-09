@@ -1,7 +1,5 @@
-from dash import Dash, html, dcc, Input, Output, callback, State, dash_table
-import base64
-import pandas as pd
-from application.mt4data import TxtParser
+from dash import Dash, html, dcc, Input, Output, callback, State
+from data_classes.mt4data import TxtParser
 
 app = Dash(__name__)
 

@@ -18,7 +18,6 @@ trading performance.
 
 ## Screenshots
 
-![Alt text](./application/screenshots/trade_analysis_first.png?raw=true "Graphs example 1")
 ![](https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNzdicjM1dnFwdWMyOWRuOWUxdzg5bTB6YTZ3YTQ4a2dibXBlZzJ4eiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ylmPcsguQ8rBe1NitK/giphy.gif)
 ![](https://imgur.com/9Wn9rHy.gif)
 ![](https://imgur.com/lHQ46ZB.gif)
@@ -55,7 +54,7 @@ cp .env.example .env
 
 ```bash
 # Start the Dash web application
-python -m application.dash_apps.graphs
+python -m run
 ```
 
 - Open your browser and go to `http://localhost:8050`
@@ -66,7 +65,7 @@ python -m application.dash_apps.graphs
 ## Project Structure
 
 ```
-application/
+TradeAnalysis/
     constants.py         # Shared constants, dropdown options, color settings
     mt4data.py           # Data parsing and trade/balance model classes
     statistics.py        # Metrics calculation and analysis logic
