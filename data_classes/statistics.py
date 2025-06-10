@@ -202,6 +202,7 @@ class Metrics:
 
     def get_max_run(self, drawdown=False) -> float:
         """Returns the value of the max run up of profit colum.  For drawdown = False get max drawdown"""
+        # if we want the dropdown, we just flip the graph by changing sign (we flip the graph)
         cum_profit = (-1) ** drawdown * self.df.cum_profit
         min_val = 0
         max_runup = 0
@@ -234,7 +235,7 @@ class Metrics:
         self.df = self.df[_METRICS_DF_KEYS]
 
     def _max_consecutive_streak(self, condition: bool = True) -> int:
-        """Returns the maximum consecutive streak of trades where won_trade == condition"""
+        """Returns the maximum consecutive streak of trades where won_trade == True | False"""
         max_streak = 0
         streak = 0
         for val in self.df.won_trade:
@@ -253,6 +254,7 @@ class Metrics:
 
         limits = [row.high, row.low]
         if max_loss:
+            #
             limits.reverse()
         gain = - 10 ** 100
         if row.order_type == 'buy':
