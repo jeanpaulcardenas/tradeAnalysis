@@ -2,8 +2,11 @@ from dotenv import load_dotenv
 import plotly.express.colors as pxc
 import logging
 import os
+import warnings
 
 DEBUG = False
+_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+_LOG_FILE_PATH = f'{_ROOT_DIR}/data/test.log'
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -12,8 +15,12 @@ def get_logger(name: str) -> logging.Logger:
         logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
 
         formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-
-        file_handler = logging.FileHandler('./data/test.log', mode='w')
+        try:
+            file_handler = logging.FileHandler(_LOG_FILE_PATH, mode='w')
+        except FileNotFoundError:
+            file_handler = logging.FileHandler('./test.log', mode='w')
+            warnings.warn(f"File path {_LOG_FILE_PATH} not found. log file created at './test.log, "
+                          f"relative the '__main__' module")
         file_handler.setFormatter(formatter)
 
         console_handler = logging.StreamHandler()
@@ -27,84 +34,15 @@ def get_logger(name: str) -> logging.Logger:
 
 load_dotenv()
 
-TM_API_KEY = os.getenv('TM_API_KEY')  # Tradermade API key
+_TM_API_KEY = os.getenv('TM_API_KEY')  # Tradermade API key
 
-order_types = {'buy', 'sell'}
+# Trading classes constants
+_ORDER_TYPES = {'buy', 'sell'}
 
-METRICS_DF_KEYS = ['order', 'symbol', 'order_type', 'volume', 'open_time', 'close_time', 'time_opened', 'open_price',
-                   'close_price', 'high', 'low', 'sl', 'tp', 'profit', 'max_possible_gain', 'max_possible_loss',
-                   'cum_profit', 'pips', 'commission', 'day_of_week', 'won_trade', 'taxes', 'swap', 'base', 'quote']
-DOW = {
-    0: 'monday',
-    1: 'tuesday',
-    2: 'wednesday',
-    3: 'thursday',
-    4: 'friday',
-    5: 'saturday',
-    6: 'sunday'
-}
-
-PLOTLY_GRAPH_TEMPLATE = 'plotly_dark'
-
-PLOTLY_GRAPH_COLORS = pxc.qualitative.Light24[1:]
-PLOTLY_GRAPH_COLORS.insert(1, pxc.qualitative.Light24[0])
-SUNBURST_PATH = ['won_lost', 'order_type', 'day_of_week', 'symbol']
-
-TIME_TYPE_OPTIONS = [
-    {'label': 'Swing', 'value':  'days'},
-    {'label': 'Intraday', 'value': 'hours'},
-    {'label': 'Scalping', 'value': 'minutes'}
-]
-TIME_TYPE_DICT = {
-    'days': {'period': 'days', 'denominator': 60*60*24, 'ceiling': 10**10},
-    'hours': {'period': 'hours', 'denominator': 3600, 'ceiling': 60*60*24},
-    'minutes': {'period': 'minutes', 'denominator': 60, 'ceiling': 15*60}
-}
-
-METRICS_DROPDOWN_OPTIONS = [
-    {'label': 'Income (in acct currency)', 'value': False},
-    {'label': 'PIPs', 'value': True}
-]
-
-BARS_DROPDOWN_OPTIONS = [
-    {'label': 'Weekly', 'value': 'W'},
-    {'label': 'Monthly', 'value': 'ME'},
-    {'label': 'Annual', 'value': 'YE'}
-]
-
-INCOME_DROPDOWN_OPTIONS = [
-    {'label': 'All', 'value': 0},
-    {'label': 'Buy vs Sell', 'value': 'order_type'},
-    {'label': 'Pairs', 'value': 'symbol'},
-    {'label': 'Day of week', 'value': 'day_of_week'}
-]
-
-MONTHS = {
-    '01': 'enero',
-    '02': 'febrero',
-    '03': 'marzo',
-    '04': 'abril',
-    '05': 'mayo',
-    '06': 'junio',
-    '07': 'julio',
-    '08': 'agosto',
-    '09': 'septiembre',
-    '10': 'octubre',
-    '11': 'noviembre',
-    '12': 'diciembre',
-}
-
-CURRENCIES = {
-    'EUR': '€',
-    'USD': '$',
-    'AUD': '$',
-    'CAD': '$',
-    'NZD': '$',
-    'GBP': '£',
-    'JPY': '¥',
-}
-
-PAIRS = {
+_METRICS_DF_KEYS = ['order', 'symbol', 'order_type', 'volume', 'open_time', 'close_time', 'delta_time', 'open_price',
+                    'close_price', 'high', 'low', 'sl', 'tp', 'profit', 'max_possible_gain', 'max_possible_loss',
+                    'cum_profit', 'pips', 'commission', 'day_of_week', 'won_trade', 'taxes', 'swap', 'base', 'quote']
+_PAIRS = {
     'AED': 'UAE Dirham',
     'AOA': 'Angolan Kwanza',
     'ARS': 'Argentine Peso',
@@ -159,7 +97,43 @@ PAIRS = {
     'ZAR': 'South African Rand'
 }
 
-COLORS = {
+
+# Plotly constants graphs
+_PLOTLY_GRAPH_TEMPLATE = 'plotly_dark'
+_PLOTLY_GRAPH_COLORS = pxc.qualitative.Light24[1:]
+_PLOTLY_GRAPH_COLORS.insert(1, pxc.qualitative.Light24[0])
+
+# Plotly options (dash app layout dcc segments)
+_TIME_TYPE_OPTIONS = [
+    {'label': 'Swing', 'value': 'days'},
+    {'label': 'Intraday', 'value': 'hours'},
+    {'label': 'Scalping', 'value': 'minutes'}
+]
+_TIME_TYPE_DICT = {
+    'days': {'period': 'days', 'denominator': 60 * 60 * 24, 'ceiling': 10 ** 10},
+    'hours': {'period': 'hours', 'denominator': 3600, 'ceiling': 60 * 60 * 24},
+    'minutes': {'period': 'minutes', 'denominator': 60, 'ceiling': 15 * 60}
+}
+
+_METRICS_DROPDOWN_OPTIONS = [
+    {'label': 'Income (in acct currency)', 'value': False},
+    {'label': 'PIPs', 'value': True}
+]
+
+_BARS_DROPDOWN_OPTIONS = [
+    {'label': 'Weekly', 'value': 'W'},
+    {'label': 'Monthly', 'value': 'ME'},
+    {'label': 'Annual', 'value': 'YE'}
+]
+
+_INCOME_DROPDOWN_OPTIONS = [
+    {'label': 'All', 'value': 0},
+    {'label': 'Buy vs Sell', 'value': 'order_type'},
+    {'label': 'Pairs', 'value': 'symbol'},
+    {'label': 'Day of week', 'value': 'day_of_week'}
+]
+
+_COLORS = {
     'blue': 'rgb(0, 80, 250)',
     'red': 'rgb(250, 0, 0)',
     'white': 'rgb(255, 255, 255)',
@@ -171,11 +145,4 @@ COLORS = {
     'lightblue': 'rgb(45, 250, 250)',
     'pink': 'rgb(250, 90, 255)',
     'translucent_grey': 'rgba(120, 120, 120, 0.5)',
-}
-
-COLUMN_USED = {
-    'All': None,
-    'Buy vs Sell': 'order_type',
-    'Pairs': 'symbol',
-    'Day of week': 'day_of_week',
 }
