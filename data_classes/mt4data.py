@@ -98,7 +98,7 @@ class TxtParser:
 
             try:
                 # turn values lower case and remove leading and trailing with spaces
-                acct_info[values[0].lower().strip()] = values[1]
+                acct_info[values[0].lower().strip()] = values[1].strip()
             except IndexError:
                 pass
         return acct_info
@@ -397,7 +397,7 @@ class TraderMadeClient:
             'period': period,
             'format': 'split'
         }
-        logger.info(f"{__name__} {__class__} api call parameters {params}")
+        logger.info(f"{__class__} api call parameters {params}")
         return params
 
     def build_params(self, endpoint: str, **kwargs) -> dict:
@@ -524,10 +524,10 @@ class TraderMadeClient:
             logger.info(f'quotes not in response {data}')
             return pd.DataFrame()
 
-        df = pd.DataFrame(data["quotes"]["data_classes"], columns=data["quotes"]["columns"])
+        df = pd.DataFrame(data['quotes']['data'], columns=data['quotes']['columns'])
         if fields:
             try:
-                df = df[["date"] + fields]
+                df = df[['date'] + fields]
             except KeyError as e:
                 logger.warning(f"Some requested fields not found in data: {e}")
                 df = pd.DataFrame()  # if fields requested are not found, return empty dataframe
@@ -563,5 +563,5 @@ if __name__ == '__main__':
     one_months = datetime.timedelta(days=3)
     tm_client.complete_trade_high_low(now.trades)
     print(now.forex_trades)
-    with open("../data/cached_trade_data.pkl", "wb") as f:
+    with open('../data/cached_trade_data.pkl', 'wb') as f:
         pickle.dump(now, f)
