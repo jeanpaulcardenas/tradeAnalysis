@@ -218,7 +218,7 @@ class Metrics:
         """sorts dataframe by values 'by'. 'by' must be any of the available column names"""
         self.df.sort_values(by=by, inplace=True, ignore_index=True)
 
-    def _complete_dataframe(self):
+    def _complete_dataframe(self) -> None:
         """Add key columns to the dataframe for analysis.
 
         Columns: max_possible_gain, max_possible_loss, day_of_week, won_trade, accumulative_profit, 'pips'"""
@@ -283,7 +283,6 @@ class Metrics:
             return sign * lot * row.volume * (final_value - row.open_price) / final_value
         # TODO: create logic for cases where denom == 0. Calling the API to get account_currency/quote would satisfy
         elif row.profit:
-            logger.info(f"using rule of 3 for trade {row.order}")
             denominator = row.close_price - row.open_price
             if denominator == 0:  # we are not able to calculate by rule of 3 when open price == close price
                 logger.warning(f"in trade {row.order} open and close prices are equal: {row.open_price},"
@@ -301,17 +300,19 @@ class Metrics:
         df = self.df[['close_time']].copy()
         try:
             if not column:
+                # if no column, just return profit for all rows of df
                 df = self.df[['close_time', 'profit']]
 
             else:
-                for item in self.df[str(column)].unique():
-                    df[str(item)] = self.df.profit[self.df[str(column)] == item]
+                for item in self.df[column].unique():
+                    # create column for each unique value in df[column] with values = 'profit'
+                    df[item] = self.df.profit[self.df[column] == item]
 
         except KeyError:
             logger.error(f"Column parameter for income_by_period '{column}'"
                          f" does not exist in dataframe:\n {self.df.head()}")
             return pd.DataFrame()
-
+        #
         grouped_df = df.groupby(pd.Grouper(key='close_time', freq=frequency)).sum()
         logger.info(f"This is the grouped df:\n {grouped_df.head()}")
         return grouped_df
@@ -323,7 +324,7 @@ class Metrics:
         and n_iterations"""
         msg = 'This 95% CI is based on historical trade outcomes. Future results may differ.'
         if n_iterations < 1 or 1 > ci > 100 or not (isinstance(data[0], float) or isinstance(data[0], int)):
-            logger.warning(f"{__name__} {__class__} can't run _bootstrap_confidence_interval_mean function with"
+            logger.warning(f"can't run _bootstrap_confidence_interval_mean function with"
                            f"params: iterations={n_iterations}, ci={ci}")
             return 0, 0, ''
         data = np.asarray(data)
@@ -334,7 +335,9 @@ class Metrics:
         if size < 30:
             msg = 'bootstrap CI sample less than 30! result not very meaningful'
             logger.info(f"{__name__} {__class__} {msg}")
+        # produce n iterations of size data.size from data, to create samples. Values can repeat (replace=True)
         samples = np.random.choice(data, size=(n_iterations, data.size), replace=True)
+        # get the mean of the n samples
         stats = np.apply_along_axis(np.mean, axis=1, arr=samples)
         lower = np.percentile(stats, (100 - ci) / 2)
         upper = np.percentile(stats, 100 - (100 - ci) / 2)
@@ -348,8 +351,10 @@ class Metrics:
         if isinstance(row.won_trade, bool):
             sign = (-1) ** (row.won_trade + 1)
         if 'JPY' in row.symbol:
+            # for JPY pairs a pip is 0.01 times bigger than the minimum decimal
             return int(round(sign * 100 * diff, 0))
         else:
+            # for most other pairs a pip is 0.0001
             return int(round(sign * 10 ** 4 * diff, 0))
 
     @staticmethod
