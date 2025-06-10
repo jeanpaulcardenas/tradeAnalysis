@@ -34,7 +34,7 @@ def set_start_end_dates(base_df: pd.DataFrame) -> tuple[dt.datetime, dt.datetime
     return start_date, end_date
 
 
-def app_layout(start_date, end_date):
+def app_layout(start_date, end_date) -> dash.html.Div:
     """Create layout of graph's page. Start and end date will be the initial values of date picker range."""
     layout = html.Div([
         html.H1('Profit', style={'text-align': 'center'}),
