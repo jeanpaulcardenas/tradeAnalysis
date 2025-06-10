@@ -10,6 +10,7 @@ logger = get_logger(__name__)  # Create loging instance for this module.
 
 def zero_division_to_zero(func):
     """Decorator that returns zero when a 'ZeroDivisionError' occurs."""
+
     def wrapper(self):
         try:
             return func(self)
@@ -62,7 +63,7 @@ class Metrics:
         currency = trade_data.currency
         trade_dict = [trade.__dict__ for trade in trade_data.forex_trades]  # Create dict from Trade object
         df = pd.DataFrame(trade_dict)
-        balance_dict = [balance.__dict__ for balance in trade_data.balances]    # Crate dict from Balance object
+        balance_dict = [balance.__dict__ for balance in trade_data.balances]  # Crate dict from Balance object
         balance_df = pd.DataFrame(balance_dict)
         return cls(df, balance_df, currency)
 
@@ -222,7 +223,7 @@ class Metrics:
 
         Columns: max_possible_gain, max_possible_loss, day_of_week, won_trade, accumulative_profit, 'pips'"""
 
-        self.df['max_possible_gain'] = self.df.apply(func=self._get_max_gain, axis='columns')
+        self.df['max_possible_gain'] = self.df.apply(func=lambda row: round(self._get_max_gain(row, False), 2), axis='columns')
         self.df['max_possible_loss'] = self.df.apply(func=lambda row: round(self._get_max_gain(row, True), 2),
                                                      axis='columns')
         self.df['cum_profit'] = self.df.profit.cumsum()
@@ -254,13 +255,13 @@ class Metrics:
 
         limits = [row.high, row.low]
         if max_loss:
-            #
+            # reverse if we're looking for max loss instead of max gain
             limits.reverse()
         gain = - 10 ** 100
         if row.order_type == 'buy':
             gain = self._get_trade_profit(row, limits[0])
         elif row.order_type == 'sell':
-            gain = -self._get_trade_profit(row, limits[1])
+            gain = self._get_trade_profit(row, limits[1])
 
         if Metrics._max_is_less_than_actual(gain, row.profit, max_loss):
             logger.warning(f'In trade order: {row.order} max_possible_gain/loss {round(gain, 2)} '
@@ -273,20 +274,23 @@ class Metrics:
         if account currency is not the quote nor base currency, the rule of three is used.
         This might not work when open and close price are equal, in which case profit returned is 0."""
 
-        lot = 10 ** 5
+        lot = 10 ** 5  # a lot is 100 000 units
+        sign = (-1) ** (row.order_type == 'sell')
         if row.quote == self.currency:
-            return lot * row.volume * (final_value - row.open_price)
+            return sign * lot * row.volume * (final_value - row.open_price)
 
         elif row.base == self.currency:
-            return lot * row.volume * (final_value - row.open_price) / final_value
-
+            return sign * lot * row.volume * (final_value - row.open_price) / final_value
+        # TODO: create logic for cases where denom == 0. Calling the API to get account_currency/quote would satisfy
         elif row.profit:
+            logger.info(f"using rule of 3 for trade {row.order}")
             denominator = row.close_price - row.open_price
-            if denominator == 0:
+            if denominator == 0:  # we are not able to calculate by rule of 3 when open price == close price
                 logger.warning(f"in trade {row.order} open and close prices are equal: {row.open_price},"
                                f" unable to calculate max possible nor min possible be rule of three")
                 return row.profit
-            return abs(row.profit) * (final_value - row.open_price) / abs(row.close_price - row.open_price)
+            # apply rule of 3
+            return row.profit * (final_value - row.open_price) / (row.close_price - row.open_price)
 
         else:
             return row.profit
@@ -380,4 +384,4 @@ if __name__ == '__main__':
     for attr_name in dir(my_metrics.__class__):
         attr = getattr(my_metrics.__class__, attr_name)
         if isinstance(attr, property):
-            logger.info(f"{attr_name}: {getattr(my_metrics, attr_name)}")   # Print all metrics properties
+            logger.info(f"{attr_name}: {getattr(my_metrics, attr_name)}")  # Print all metrics properties
