@@ -156,27 +156,27 @@ class TradeData:
 
         logger.info(f" {__name__} amount of traes {len(self.trades)} amount of balances {len(self.balances)}")
 
-    def _insert_delta_time(self):
+    def _insert_delta_time(self) -> None:
         """Assigns dt.timedelta value for opening and closing times in Trade.delta_time"""
         for item in self.trades:
             delta_time = item.close_time - item.open_time
             item.delta_time = delta_time
 
-    def _create_balance_objects(self):
+    def _create_balance_objects(self) -> None:
         """Creates a list of Balance objects using a parser functionality, list stored in self._balance_objects"""
         self._balance_objects = [
             obj for r in self._balances_raw
             if (obj := TradeData._parse_balance(r, self._HTML_DATE_SOURCE_FORMAT))
         ]
 
-    def _create_trade_objects(self):
+    def _create_trade_objects(self) -> None:
         """Creates a list of Trade objects using a parser functionality"""
         self._trade_objects = [
             obj for r in self._trades_raw
             if (obj := TradeData._parse_trade(r, self._HTML_DATE_SOURCE_FORMAT))
         ]
 
-    def _split_operations(self):
+    def _split_operations(self) -> None:
         """separates balance and trading info from trades_info. trades are stored in self._trades
         and balances are stored in self._balances"""
         for row in self.raw_operations:
@@ -186,7 +186,7 @@ class TradeData:
             elif TradeData._is_balance(row):
                 self._balances_raw.append(row)
 
-    def _insert_balance_type(self):
+    def _insert_balance_type(self) -> None:
         """assigns the 'withdrawal' or 'balance' to objects in 'self.balances.type'"""
         for item in self.balances:
             item.order_type = TradeData._get_balance_type(item.amount)
@@ -208,7 +208,7 @@ class TradeData:
             logger.warning(f"Failed to parse trade row: {row} | Error: {e}")
             return None
 
-    def _update_base_and_quote(self):
+    def _update_base_and_quote(self) -> None:
         """Updates 'trade.quote' and 'trade.base' as it's initiated as an empty string.
         Returns 'None' if symbol is not a forex tradable"""
         # assign base and quote values for each trade, if len != 6, these values will remain as empty strings ''.
@@ -246,12 +246,12 @@ class TradeData:
             return None
 
     @staticmethod
-    def _is_trade(row):
+    def _is_trade(row) -> bool:
         """returns True if a list contains a trade's information"""
         return row[2].lower() in _ORDER_TYPES if len(row) > 2 else False
 
     @staticmethod
-    def _is_balance(row):
+    def _is_balance(row) -> bool:
         """returns True if a list contains a balance's information"""
         return row[2].lower() == 'balance' if len(row) > 2 else False
 
@@ -266,7 +266,7 @@ class TradeData:
             return 'withdrawal'
 
     @staticmethod
-    def _balance_to_float(balance_amount: str):
+    def _balance_to_float(balance_amount: str) -> float:
         """returns a float from a str having blank spaces as separators.
         e.g. '10 000.00' -> 10000.0'"""
         no_spaces = balance_amount.replace(' ', '')  # remove the thousand separator (blank space)
@@ -314,7 +314,7 @@ class TraderMadeClient:
         self._API_KEY = tm_api_key
         self._set_api_key()
 
-    def complete_trade_high_low(self, trades: list[Trade]):
+    def complete_trade_high_low(self, trades: list[Trade]) -> None:
         """Completes 'trades.high' and 'trades.low' from a list of trades. Uses tradermade api to complete it
         'trades.high' is the max value in between 'trade.open_time' and 'trade.close_time'
         'trades.low' is the min value in between 'trade.open_time' and 'trade.close_time'"""
@@ -420,7 +420,7 @@ class TraderMadeClient:
             raise ValueError(f"Wrong endpoint {endpoint} given.Expected endpoints: "
                              f"['timeseries', 'historical', 'hour_historical', 'minute_historical'] ")
 
-    def _set_api_key(self):
+    def _set_api_key(self) -> None:
         """Sets the RESTful API, runs on instantiation"""
         try:
             tm.set_rest_api_key(self.api_key)
@@ -516,7 +516,7 @@ class TraderMadeClient:
             return False
 
     @staticmethod
-    def _parse_response(data: dict, fields: list[str]) -> pd.DataFrame | dict:
+    def _parse_response(data: dict, fields: list[str]) -> pd.DataFrame:
         """Handles tradermade api request answer, returns data frame with [fields] columns if the call was correct.
          returns empty dataframe in any other case"""
         logger.info(f"{__name__} tradermade request keys: {data.keys()}")
