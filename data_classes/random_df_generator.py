@@ -70,7 +70,7 @@ class RandDataGen:
 
         self.data_dict['open_price'] = [RandDataGen._random_pair_price(pair) for pair in self.data_dict['symbol']]
         self.data_dict['close_price'] = [RandDataGen._get_close_val(vi) for vi in self.data_dict['open_price']]
-        self.data_dict['time_opened'] = [end_date - start_date for end_date, start_date in
+        self.data_dict['delta_time'] = [end_date - start_date for end_date, start_date in
                                          zip(self.data_dict['close_time'], self.data_dict['open_time'])]
         self.data_dict['high'] = [RandDataGen._random_high(vi, vf)
                                   for vi, vf in zip(self.data_dict['open_price'], self.data_dict['close_price'])]

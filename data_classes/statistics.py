@@ -1,18 +1,15 @@
 from data_classes.mt4data import Trade, TradeData, Balance  # noqa: F401
-from config import DOW, METRICS_DF_KEYS, CURRENCIES, get_logger
+from config import _METRICS_DF_KEYS, get_logger
 import datetime as dt
 import numpy as np
 import pandas as pd
 import pickle
 
-if __name__ == '__main__':
-    with open('../data/cached_trade_data.pkl', 'rb') as f:
-        test_trade_data = pickle.load(f)
-
-logger = get_logger(__name__)
+logger = get_logger(__name__)  # Create loging instance for this module.
 
 
 def zero_division_to_zero(func):
+    """Decorator that returns zero when a 'ZeroDivisionError' occurs."""
     def wrapper(self):
         try:
             return func(self)
@@ -24,6 +21,24 @@ def zero_division_to_zero(func):
 
 
 class Metrics:
+    _CURRENCIES = {
+        'EUR': '€',
+        'USD': '$',
+        'AUD': '$',
+        'CAD': '$',
+        'NZD': '$',
+        'GBP': '£',
+        'JPY': '¥',
+    }
+    _DOW = {
+        0: 'monday',
+        1: 'tuesday',
+        2: 'wednesday',
+        3: 'thursday',
+        4: 'friday',
+        5: 'saturday',
+        6: 'sunday'
+    }
 
     def __init__(self, trades_df: pd.DataFrame, balance_df: pd.DataFrame, currency: str):
         self.df = trades_df
@@ -33,8 +48,11 @@ class Metrics:
             self.df.convert_dtypes()
             self.sort_df_values(by='close_time')
             self._complete_dataframe()
+
+        # Create a dataframe with expected columns for self.df without rows data.
+        # This avoids errors when instantiating a Metrics object with empty trade data.
         else:
-            keys = METRICS_DF_KEYS
+            keys = _METRICS_DF_KEYS
             self.df = pd.DataFrame(columns=keys)
 
     @classmethod
@@ -42,9 +60,9 @@ class Metrics:
         """Creates a Metrics object from a df created from a dataframe with all columns of self.df existing.
         Intended to create objects from self.df themselves"""
         currency = trade_data.currency
-        trade_dict = [trade.__dict__ for trade in trade_data.forex_trades]
+        trade_dict = [trade.__dict__ for trade in trade_data.forex_trades]  # Create dict from Trade object
         df = pd.DataFrame(trade_dict)
-        balance_dict = [balance.__dict__ for balance in trade_data.balances]
+        balance_dict = [balance.__dict__ for balance in trade_data.balances]    # Crate dict from Balance object
         balance_df = pd.DataFrame(balance_dict)
         return cls(df, balance_df, currency)
 
@@ -55,11 +73,11 @@ class Metrics:
 
     @property
     def currency_symbol(self):
-        """Returns account currency symbol"""
+        """Returns account currency symbol, if currency symbol is not supported, '$' will be return"""
         try:
-            return CURRENCIES[self.currency]
+            return Metrics._CURRENCIES[self.currency]
         except KeyError:
-            return CURRENCIES['USD']
+            return Metrics._CURRENCIES['USD']
 
     @property
     def n_of_trades(self) -> int:
@@ -207,13 +225,13 @@ class Metrics:
         self.df['max_possible_loss'] = self.df.apply(func=lambda row: round(self._get_max_gain(row, True), 2),
                                                      axis='columns')
         self.df['cum_profit'] = self.df.profit.cumsum()
-        self.df['day_of_week'] = self.df.close_time.apply(func=lambda date: DOW[date.weekday()])
+        self.df['day_of_week'] = self.df.close_time.apply(func=lambda date: Metrics._DOW[date.weekday()])
         self.df['won_trade'] = (self.df.profit > 0)
         self.df['pips'] = self.df.apply(Metrics._get_pips, axis='columns')
         self.df.symbol = self.df.symbol.astype('category')
         self.df.order_type = self.df.order_type.astype('category')
         self.df.day_of_week = self.df.day_of_week.astype('category')
-        self.df = self.df[METRICS_DF_KEYS]
+        self.df = self.df[_METRICS_DF_KEYS]
 
     def _max_consecutive_streak(self, condition: bool = True) -> int:
         """Returns the maximum consecutive streak of trades where won_trade == condition"""
@@ -346,7 +364,13 @@ def metrics_between_dates(metrics_obj: Metrics, start_date: dt.datetime, end_dat
     return Metrics(df_ranged, pd.DataFrame(), metrics_obj.currency)
 
 
+# Running this module as main loads a Trade object, creates metrics instance and prints dataframe and log all properties
 if __name__ == '__main__':
+    with open('../data/cached_trade_data.pkl', 'rb') as f:
+        # If trade object does not exist, run 'mt4data.py' as main
+        # note: running 'mt4data.py' (THIS WILL USE API CALLS)
+        test_trade_data = pickle.load(f)
+
     my_metrics = Metrics.from_trade_data(test_trade_data)
     print(my_metrics.df.to_string())
     print(my_metrics.bootstrap_confidence_interval_mean(my_metrics.df.profit[my_metrics.df.won_trade]))
@@ -354,4 +378,4 @@ if __name__ == '__main__':
     for attr_name in dir(my_metrics.__class__):
         attr = getattr(my_metrics.__class__, attr_name)
         if isinstance(attr, property):
-            print(f"{attr_name}: {getattr(my_metrics, attr_name)}")
+            logger.info(f"{attr_name}: {getattr(my_metrics, attr_name)}")   # Print all metrics properties

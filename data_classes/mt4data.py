@@ -1,5 +1,5 @@
 import datetime
-from config import *
+from config import _ORDER_TYPES, get_logger, _PAIRS, _TM_API_KEY
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
 import datetime as dt
@@ -31,7 +31,7 @@ class Trade:
     profit: float
     high: float = 0
     low: float = 0
-    time_opened: dt.timedelta = 0
+    delta_time: dt.timedelta = 0
     base: str = ''
     quote: str = ''
 
@@ -153,17 +153,17 @@ class TradeData:
         self._create_trade_objects()
         self._create_balance_objects()
         self._insert_balance_type()
-        self._insert_time_opened()
+        self._insert_delta_time()
         self._update_base_and_quote()
 
         logger.info(f" {__name__} amount of traes {len(self.trades)} amount of balances {len(self.balances)}")
 
-    def _insert_time_opened(self):
-        """Assigns dt.timedelta value for opening and closing times in Trade.time_opened"""
+    def _insert_delta_time(self):
+        """Assigns dt.timedelta value for opening and closing times in Trade.delta_time"""
 
         for item in self.trades:
-            time_opened = item.close_time - item.open_time
-            item.time_opened = time_opened
+            delta_time = item.close_time - item.open_time
+            item.delta_time = delta_time
 
     def _create_balance_objects(self):
         """Creates a list of Balance objects using a parser functionality"""
@@ -256,7 +256,7 @@ class TradeData:
     def _is_trade(row):
         """returns True if a list contains a trade's information"""
 
-        return row[2].lower() in order_types if len(row) > 2 else False
+        return row[2].lower() in _ORDER_TYPES if len(row) > 2 else False
 
     @staticmethod
     def _is_balance(row):
@@ -302,7 +302,7 @@ class TradeData:
     @property
     def forex_trades(self) -> list[Trade]:
         """Returns a list with only Forex trades."""
-        return [t for t in self.trades if t.base in PAIRS and t.quote in PAIRS]
+        return [t for t in self.trades if t.base in _PAIRS and t.quote in _PAIRS]
 
 
 class TraderMadeClient:
@@ -383,7 +383,7 @@ class TraderMadeClient:
             interval = TraderMadeClient._optimal_interval(trade)
 
         if not period:
-            period = TraderMadeClient._get_optimal_period(trade.time_opened, interval)
+            period = TraderMadeClient._get_optimal_period(trade.delta_time, interval)
 
         tm_start_correction = TraderMadeClient._start_date_correction(interval, trade.open_time, trade.close_time)
 
@@ -448,26 +448,26 @@ class TraderMadeClient:
         """Selects the correct, most optimal interval ('daily', 'hourly', 'minute') to get tm.time_series info
          for a given trade"""
 
-        time_opened = trade.time_opened.total_seconds()
+        delta_time = trade.delta_time.total_seconds()
         day_in_seconds = 24 * 60 * 60
         less_than_year_old = TraderMadeClient._is_recent_than(trade.open_time, days=365)
         less_than_month_old = TraderMadeClient._is_recent_than(trade.open_time, days=29)
 
         interval = 'daily'
         if less_than_month_old:
-            if time_opened < 2 * day_in_seconds:
+            if delta_time < 2 * day_in_seconds:
                 interval = 'minute'
             else:
                 interval = 'hourly'
 
         elif less_than_year_old:
-            if time_opened < 29 * day_in_seconds:
+            if delta_time < 29 * day_in_seconds:
                 interval = 'hourly'
         logger.info(f"{__name__} is less than month old: {less_than_month_old} less than_year_old {less_than_year_old}")
         return interval
 
     @staticmethod
-    def _get_optimal_period(time_opened: dt.timedelta, interval: str) -> int:
+    def _get_optimal_period(delta_time: dt.timedelta, interval: str) -> int:
         """Selects the largest possible period for a trade,
          as of not to get unnecessary heavy responses from the timeseries request"""
 
@@ -491,7 +491,7 @@ class TraderMadeClient:
 
         if interval in ['minute', 'hourly', 'daily']:
             for threshold, period in thresholds[interval]:
-                if time_opened.total_seconds() / 60 > threshold:
+                if delta_time.total_seconds() / 60 > threshold:
                     return period
         else:
             logger.info(f'{__name__} {__class__} interval {interval} for'
@@ -553,7 +553,7 @@ if __name__ == '__main__':
     operations_infonow = aux.get_operations_info()
     now = TradeData(aux)
 
-    tm_client = TraderMadeClient(TM_API_KEY)
+    tm_client = TraderMadeClient(_TM_API_KEY)
 
     one_months = datetime.timedelta(days=3)
     tm_client.complete_trade_high_low(now.trades)

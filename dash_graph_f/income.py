@@ -1,5 +1,5 @@
 from data_classes.statistics import Metrics
-from config import *
+from config import get_logger, _METRICS_DF_KEYS,_PLOTLY_GRAPH_TEMPLATE, _PLOTLY_GRAPH_COLORS, _COLORS
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
@@ -8,6 +8,8 @@ logger = get_logger(__name__)
 
 
 class ScatterGraph:
+    _PLOTLY_GRAPH_TEMPLATE = 'plotly_dark'
+
     def __init__(self, metrics_obj: Metrics, choice: str, pips: bool, title: str):
         self._measure = 'pips' if pips else 'profit'
         self._metrics_obj = metrics_obj
@@ -54,7 +56,7 @@ class ScatterGraph:
 
     def _layout(self, title, **kwargs) -> dict:
         """Creates layout  dict for a plot. This one is specifically created for a plotly scatter plot"""
-        return dict(template=PLOTLY_GRAPH_TEMPLATE,
+        return dict(template=_PLOTLY_GRAPH_TEMPLATE,
                     showlegend=True,
                     title=dict(
                         text=title,
@@ -67,7 +69,7 @@ class ScatterGraph:
                     ),
                     yaxis=dict(
                         griddash='solid',
-                        zerolinecolor=COLORS['translucent_grey'],
+                        zerolinecolor=_COLORS['translucent_grey'],
                         ticksuffix=' ' + self.metrics_obj.currency_symbol if self.measure == 'profit' else None,
                         tickformat=',d',
                         ticklabelposition='outside right',
@@ -81,7 +83,7 @@ class ScatterGraph:
         try:
             if choice == 0:
                 return [self.df]
-            elif choice in METRICS_DF_KEYS:
+            elif choice in _METRICS_DF_KEYS:
                 return [self.df[self.df[choice] == item].reset_index(drop=True) for item in self.df[choice].unique()]
         except KeyError:
             logger.error(f"Error. choice for IncomeGraph {choice} not valid")
@@ -128,7 +130,7 @@ class ScatterGraph:
             line=dict(
                 width=2,
                 shape='linear',
-                color=PLOTLY_GRAPH_COLORS[idx]
+                color=_PLOTLY_GRAPH_COLORS[idx]
             )))
 
 
@@ -153,9 +155,9 @@ class TimeOpenIncome(ScatterGraph):
         return self.fig
 
     def _get_x_values(self, df) -> list[float]:
-        """Gets total seconds of 'time_opened' column of df and divides it by 'self.denominator'."""
+        """Gets total seconds of 'delta_time' column of df and divides it by 'self.denominator'."""
         logger.info(self.denominator)
-        series = df['time_opened'].dt.total_seconds()/self.denominator
+        series = df['delta_time'].dt.total_seconds()/self.denominator
         series = series.apply(lambda x: round(x, 1))
         return series.to_list()
 
@@ -165,7 +167,7 @@ class TimeOpenIncome(ScatterGraph):
 
     def _filter_by_style(self, df: pd.DataFrame) -> pd.DataFrame:
         """Filter df depending on 'time_style' ceiling"""
-        return df[df['time_opened'].dt.total_seconds() < self.ceiling]
+        return df[df['delta_time'].dt.total_seconds() < self.ceiling]
 
     def _update_axes(self):
         self.fig.update_xaxes(
@@ -186,7 +188,7 @@ class BarGraph:
         return dict(
             height=700,
             barmode='relative',
-            template=PLOTLY_GRAPH_TEMPLATE,
+            template=_PLOTLY_GRAPH_TEMPLATE,
             title=dict(
                 text=f'Income by period', x=0.5,
                 font=dict(
@@ -226,11 +228,11 @@ class BarGraph:
                 textposition='inside',
                 textangle=0,
                 marker=dict(
-                    color=PLOTLY_GRAPH_COLORS[idx]
+                    color=_PLOTLY_GRAPH_COLORS[idx]
                 ),
                 texttemplate='%{y:,.0f} ' + self.metrics.currency_symbol,
                 insidetextfont=dict(
-                    color=COLORS['white']
+                    color=_COLORS['white']
                 )
 
             )
@@ -239,6 +241,8 @@ class BarGraph:
 
 
 class SunBurst:
+    _PATH = ['won_lost', 'order_type', 'day_of_week', 'symbol']
+
     def __init__(self, metric_obj: Metrics):
         self.metric = metric_obj
         self.df = self.metric.df.copy()
@@ -268,9 +272,9 @@ class SunBurst:
     def _get_color_map(self) -> list[str]:
         """Returns the correct order of ['blue', 'red'] so that won trades are always blue. To be used in get_figure."""
         if self.metric.net_income < 0:
-            return [COLORS['red'], COLORS['blue']]
+            return [_COLORS['red'], _COLORS['blue']]
         else:
-            return [COLORS['blue'], COLORS['red']]
+            return [_COLORS['blue'], _COLORS['red']]
 
     def add_won_lost_column(self):
         self.df['won_lost'] = ['Won' if won else 'Lost' for won in self.df.won_trade]
@@ -279,7 +283,7 @@ class SunBurst:
         """Returns a sunburst figure"""
         color_map = self._get_color_map()
         fig = px.sunburst(data_frame=self.df,
-                          path=SUNBURST_PATH,
+                          path=SunBurst._PATH,
                           values=abs(self.df.profit),
                           color_discrete_sequence=color_map,
                           )

@@ -2,8 +2,8 @@ from dash import dash, dcc, html, callback
 from dash.dependencies import Input, Output
 from data_classes.statistics import Metrics, metrics_between_dates
 from dash_graph_f.income import ScatterGraph, BarGraph, SunBurst, TimeOpenIncome
-from config import INCOME_DROPDOWN_OPTIONS, BARS_DROPDOWN_OPTIONS, METRICS_DROPDOWN_OPTIONS, \
-    TIME_TYPE_OPTIONS, TIME_TYPE_DICT, get_logger
+from config import _INCOME_DROPDOWN_OPTIONS, _BARS_DROPDOWN_OPTIONS, _METRICS_DROPDOWN_OPTIONS, \
+    _TIME_TYPE_OPTIONS, _TIME_TYPE_DICT, get_logger
 import pandas as pd
 import datetime as dt
 import pickle
@@ -40,7 +40,7 @@ def app_layout(start_date, end_date):
         html.H1('Profit', style={'text-align': 'center'}),
         html.Br(),
         dcc.Dropdown(
-            options=METRICS_DROPDOWN_OPTIONS,
+            options=_METRICS_DROPDOWN_OPTIONS,
             value=False,
             id='metric dropdown'
         ),
@@ -55,7 +55,7 @@ def app_layout(start_date, end_date):
 
         ),
         dcc.Dropdown(
-            options=INCOME_DROPDOWN_OPTIONS,
+            options=_INCOME_DROPDOWN_OPTIONS,
             value=0,
             id='income dropdown'
         ),
@@ -63,7 +63,7 @@ def app_layout(start_date, end_date):
         html.Br(),
 
         dcc.Dropdown(
-            options=BARS_DROPDOWN_OPTIONS,
+            options=_BARS_DROPDOWN_OPTIONS,
             value='YE',
             id='bars dropdown'
         ),
@@ -72,7 +72,7 @@ def app_layout(start_date, end_date):
         dcc.Graph(id='sunburst'),
         html.Br(),
         dcc.Dropdown(
-            options=TIME_TYPE_OPTIONS,
+            options=_TIME_TYPE_OPTIONS,
             value='days',
             id='time style'
 
@@ -119,7 +119,7 @@ def update_charts(measure, start_date, end_date, inc_choice, bars_choice, time_s
                                 choice=inc_choice,
                                 pips=measure,
                                 title='Time open vs Income',
-                                **TIME_TYPE_DICT[time_style]).get_figure()
+                                **_TIME_TYPE_DICT[time_style]).get_figure()
 
     return [income_graph, bars_graph, sunburst, time_graph]
 
