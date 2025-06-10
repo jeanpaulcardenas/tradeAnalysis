@@ -41,7 +41,7 @@ class RandDataGen:
         }
         return data
 
-    def _add_profits_to_dict(self):
+    def _add_profits_to_dict(self) -> None:
         """Add 'profit' key and it's values to 'self.dict'. For pairs that don't contain the account
         currency the profit value is calculated as if the base currency was the account currency (very inaccurate)."""
         open_price, close_price, vol, symbol, order_type = \
@@ -60,7 +60,7 @@ class RandDataGen:
 
         self.data_dict['profit'] = profits
 
-    def update_data(self):
+    def update_data(self) -> None:
         """Updates dict with 'order', 'close_time', 'close_price', 'high', 'low', 'profit', 'sl', 'tp',
         'commission', 'taxes', 'swap', 'base', 'quote'"""
         zeros_list = [0 for _ in range(self.n_trades)]
@@ -130,7 +130,7 @@ class RandDataGen:
         return round(min_open_close - random.uniform(1.00, 1.3) * dif, 5)
 
     @staticmethod
-    def _get_close_val(initial_val: float):
+    def _get_close_val(initial_val: float) -> float:
         """Gets close_price value for an initial data dictionary. Used to get 'close_price' data"""
         return round(initial_val + random.uniform(-initial_val / 25, initial_val / 25), 5)
 
