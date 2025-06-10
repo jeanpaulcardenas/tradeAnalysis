@@ -48,10 +48,10 @@ class ScatterGraph:
         objs = self._create_dataframes(choice=self.choice)
         for i, df in enumerate(objs):
             name = self._get_legend_name(df=df)
-            x = [df.open_time[0]] + df.close_time.to_list()
-            y = [0] + df[self.measure].cumsum().to_list()
+            x = [df.open_time[0]] + df.close_time.to_list()  # adding open_time[0] value at index 0
+            y = [0] + df[self.measure].cumsum().to_list()    # adding a zero value at index 0
             self._add_scatter_plot(name=name, x=x, y=y, idx=i, mode='lines+markers')
-            self._add_final_markers(idx=i, name=name)
+            self._add_final_markers(idx=i, name=name)  # add text marker at the end of each line plot
         return self.fig
 
     def _layout(self, title, **kwargs) -> dict:
@@ -81,9 +81,11 @@ class ScatterGraph:
         """returns dataframes for the given choice. e.g. if choice == pairs, returns a dataframe for each unique pair
         containing only data with that pair symbol."""
         try:
-            if choice == 0:
+            if choice == 0:  # if there is no choice return self.df, this will lead a global income figure
                 return [self.df]
             elif choice in _METRICS_DF_KEYS:
+                # Create a list a dataframes, one for each unique self.df[choice],
+                # e.g. self.df[choice].unique = ['EURUSD', 'USDJPY']
                 return [self.df[self.df[choice] == item].reset_index(drop=True) for item in self.df[choice].unique()]
         except KeyError:
             logger.error(f"Error. choice for IncomeGraph {choice} not valid")
@@ -101,7 +103,7 @@ class ScatterGraph:
             name = "All trades"
         return name
 
-    def _add_final_markers(self, idx: int, name):
+    def _add_final_markers(self, idx: int, name) -> None:
         """Adds final marker's text, introducing a new x y value trace to figure. **kwargs are pass to fig.add_trace"""
         idx = idx * 2
         last_date = self.fig.data[idx].x[-1]
@@ -116,7 +118,7 @@ class ScatterGraph:
             legendgroup=name,
         ))
 
-    def _add_scatter_plot(self, name: str, x: list[float], y: list[float], idx: int, mode):
+    def _add_scatter_plot(self, name: str, x: list[float], y: list[float], idx: int, mode) -> None:
         """Adds scatter plot to fig."""
         self.fig.add_trace(go.Scatter(
             name=name,
@@ -169,7 +171,7 @@ class TimeOpenIncome(ScatterGraph):
         """Filter df depending on 'time_style' ceiling"""
         return df[df['delta_time'].dt.total_seconds() < self.ceiling]
 
-    def _update_axes(self):
+    def _update_axes(self) -> None:
         self.fig.update_xaxes(
             ticksuffix=f' {self.period}',
             title='Time',
@@ -209,7 +211,7 @@ class BarGraph:
                 ticksuffix=self.metrics.currency_symbol
             ))
 
-    def _crate_dataframe(self):
+    def _crate_dataframe(self) -> pd.DataFrame:
         """Create grouped dataframe with columns df[column].unique() and their values are profit and the
         frequency is grouped by 'self.period' close_date."""
         dataframe = self.metrics.income_by_period(column=self.choice, frequency=self.period)
@@ -249,7 +251,7 @@ class SunBurst:
         self.add_won_lost_column()
 
     @staticmethod
-    def update_layout():
+    def update_layout() -> dict:
         return {
             'width': 700,
             'height': 700,
@@ -276,7 +278,7 @@ class SunBurst:
         else:
             return [_COLORS['blue'], _COLORS['red']]
 
-    def add_won_lost_column(self):
+    def add_won_lost_column(self) -> None:
         self.df['won_lost'] = ['Won' if won else 'Lost' for won in self.df.won_trade]
 
     def get_figure(self) -> go.Figure:
