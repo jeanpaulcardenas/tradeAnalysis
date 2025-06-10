@@ -35,7 +35,7 @@ class Trade:
     base: str = ''
     quote: str = ''
 
-
+# balance dataclass created to maintain well-defined data types
 @dataclass
 class Balance:
     order: int
@@ -44,53 +44,22 @@ class Balance:
     balance_type: str = ''
 
 
+# Parser class
 class TxtParser:
+    """Parser class, parses MT4 history report file"""
     _ABOVE_TRADES_REF_LINE = '   <td>Price</td><td>Commission</td><td>Taxes</td><td>Swap</td><td>Profit</td></tr>'
     _ABOVE_ACCT_REF_LINE = '<tr align=left>'
 
     def __init__(self, txt: str):
         """txt is the raw html string of the mt4 statement"""
-
         self._raw_html = txt
         self.my_html_list = TxtParser._create_html_list(self.raw_html)
         logger.info(f"TxtParser creation")
-
-    def get_operations_info(self) -> list[list[str]]:
-        """returns a list with the meaningful data of the trades and balances of the MT4 operations report"""
-
-        operations_raw = TxtParser._extract_section_from_html_list(
-            my_list=self.my_html_list,
-            start=TxtParser._ABOVE_TRADES_REF_LINE,
-        )
-        operations_info = list()
-        for line in operations_raw:
-            td_content = TxtParser._parse_td(line)
-            operations_info.append(td_content)
-        return operations_info
-
-    def get_account_info(self) -> dict:
-        """returns account, name, currency and leverage from MT4 report"""
-
-        acct_info_raw = TxtParser._extract_section_from_html_list(
-            my_list=self.my_html_list,
-            start=TxtParser._ABOVE_ACCT_REF_LINE,
-        )
-        acct_info = dict()
-        for line in acct_info_raw:
-            td_content = TxtParser._parse_td(line)
-            values = re.split(r': ', td_content[0])
-
-            try:
-                acct_info[values[0].lower()] = values[1]
-            except IndexError:
-                pass
-        return acct_info
 
     @classmethod
     def from_dash_upload(cls, uploaded_file, unicode_encoding='utf-8'):
         """decodes string content from dash upload.
         returns a list of string, each index represents each line in the .txt"""
-
         decoded = base64.b64decode(uploaded_file)
         file_text = decoded.decode(unicode_encoding)
         file_text = file_text.replace('\r\n', '\n')
@@ -104,25 +73,53 @@ class TxtParser:
 
         return cls(html_text)
 
+    def get_operations_info(self) -> list[list[str]]:
+        """returns a list with the meaningful data of the trades and balances of the MT4 operations report"""
+        operations_raw = TxtParser._extract_section_from_html_list(
+            my_list=self.my_html_list,
+            start=TxtParser._ABOVE_TRADES_REF_LINE,
+        )
+        operations_info = list()
+        for line in operations_raw:
+            td_content = TxtParser._parse_td(line)
+            operations_info.append(td_content)  # adds all values in the trade row from operations table
+        return operations_info
+
+    def get_account_info(self) -> dict:
+        """returns account, name, currency and leverage from MT4 report"""
+        acct_info_raw = TxtParser._extract_section_from_html_list(
+            my_list=self.my_html_list,
+            start=TxtParser._ABOVE_ACCT_REF_LINE,
+        )
+        acct_info = dict()
+        for line in acct_info_raw:
+            td_content = TxtParser._parse_td(line)
+            values = re.split(r':', td_content[0])
+
+            try:
+                # turn values lower case and remove leading and trailing with spaces
+                acct_info[values[0].lower().strip()] = values[1]
+            except IndexError:
+                pass
+        return acct_info
+
     @staticmethod
     def _create_html_list(my_txt_string: str) -> list:
         """returns a list of strings with each line being a line from my_txt_string"""
-
         return my_txt_string.split('\n')
 
     @staticmethod
     def _extract_section_from_html_list(my_list: list, start: str) -> list:
         """slices txt from a line reference (string) to the next empty line, empty and start
          line not included in returned list"""
-
         try:
-            start_idx = my_list.index(start)
+            start_idx = my_list.index(start)  # index of the line where operation's table starts
         except ValueError:
             raise ValueError(f"Start line '{start}' not found in HTML content.")
 
-        sliced_list = my_list[start_idx + 1:]
+        sliced_list = my_list[start_idx + 1:]  # sliced from the start of the trade's table to the end of the file
         try:
-            end_idx = sliced_list.index('')
+            end_idx = sliced_list.index('')  # index of the next line after the last trade (an empty line)
         except ValueError:
             raise ValueError("Could not find an empty line after the start reference.")
         section = sliced_list[: end_idx]
@@ -135,7 +132,8 @@ class TxtParser:
         return all_td_content
 
     @property
-    def raw_html(self):
+    def raw_html(self) -> str:
+        """Return input html file"""
         return self._raw_html
 
 
@@ -160,14 +158,12 @@ class TradeData:
 
     def _insert_delta_time(self):
         """Assigns dt.timedelta value for opening and closing times in Trade.delta_time"""
-
         for item in self.trades:
             delta_time = item.close_time - item.open_time
             item.delta_time = delta_time
 
     def _create_balance_objects(self):
-        """Creates a list of Balance objects using a parser functionality"""
-
+        """Creates a list of Balance objects using a parser functionality, list stored in self._balance_objects"""
         self._balance_objects = [
             obj for r in self._balances_raw
             if (obj := TradeData._parse_balance(r, self._HTML_DATE_SOURCE_FORMAT))
@@ -175,7 +171,6 @@ class TradeData:
 
     def _create_trade_objects(self):
         """Creates a list of Trade objects using a parser functionality"""
-
         self._trade_objects = [
             obj for r in self._trades_raw
             if (obj := TradeData._parse_trade(r, self._HTML_DATE_SOURCE_FORMAT))
@@ -184,7 +179,6 @@ class TradeData:
     def _split_operations(self):
         """separates balance and trading info from trades_info. trades are stored in self._trades
         and balances are stored in self._balances"""
-
         for row in self.raw_operations:
             if TradeData._is_trade(row):
                 self._trades_raw.append(row)
@@ -217,7 +211,7 @@ class TradeData:
     def _update_base_and_quote(self):
         """Updates 'trade.quote' and 'trade.base' as it's initiated as an empty string.
         Returns 'None' if symbol is not a forex tradable"""
-
+        # assign base and quote values for each trade, if len != 6, these values will remain as empty strings ''.
         for trade in self.trades:
             if len(trade.symbol) == 6:
                 trade.base = trade.symbol[:3]
@@ -226,7 +220,6 @@ class TradeData:
     @staticmethod
     def _parse_trade(row: list, date_format: str) -> Trade | None:
         """Returns a Trade object from a row in MT4 format. Returns None if the row is malformed."""
-
         try:
             if len(row) > 12:
                 return Trade(
@@ -255,13 +248,11 @@ class TradeData:
     @staticmethod
     def _is_trade(row):
         """returns True if a list contains a trade's information"""
-
         return row[2].lower() in _ORDER_TYPES if len(row) > 2 else False
 
     @staticmethod
     def _is_balance(row):
         """returns True if a list contains a balance's information"""
-
         return row[2].lower() == 'balance' if len(row) > 2 else False
 
     @staticmethod
@@ -278,7 +269,7 @@ class TradeData:
     def _balance_to_float(balance_amount: str):
         """returns a float from a str having blank spaces as separators.
         e.g. '10 000.00' -> 10000.0'"""
-        no_spaces = balance_amount.replace(' ', '')
+        no_spaces = balance_amount.replace(' ', '')  # remove the thousand separator (blank space)
         try:
             return float(no_spaces)
         except ValueError:
@@ -311,8 +302,13 @@ class TraderMadeClient:
     _HISTORICAL_ENDPOINT = 'historical'
     _HOUR_HISTORICAL_ENDPOINT = 'hour_historical'
     _MINUTE_HISTORICAL_ENDPOINT = 'minute_historical'
-    _TM_DATE_FORMAT_MINUTE = '%Y-%m-%d-%H:%M'
-    _TM_DATE_FORMAT_DAILY = '%Y-%m-%d'
+    _TM_DATE_FORMAT_MINUTE = '%Y-%m-%d-%H:%M'  # format needed to request minute data in Tradermade API
+    _TM_DATE_FORMAT_DAILY = '%Y-%m-%d'  # format needed to request daily data in Tradermade API
+    _DAYS_IN_A_YEAR = 365  # accounting for leap years
+    _DAYS_IN_A_MONTH = 28  # taking february into account. Definition of a month not explain in API docs
+    _MAX_DAYS_FOR_MINUTE_CALL = 2
+    _MAX_DAYS_FOR_DAILY_CALL = 28
+    _ACCEPTABLE_PERIODS = ('minute', 'hourly', 'daily')
 
     def __init__(self, tm_api_key):
         self._API_KEY = tm_api_key
@@ -331,11 +327,14 @@ class TraderMadeClient:
                 )
 
                 if df.empty:
-                    logger.warning(f"No data for trade {trade.order}")
+                    logger.warning(f"No data for trade {trade.order},"
+                                   f" high and low equal to max and minimum of trade's open and close prices")
+                    # if no data could be retrieved, return max and minimum from close and open prices
                     trade.high = max(trade.open_price, trade.close_price)
                     trade.low = min(trade.open_price, trade.close_price)
                     continue
-
+                # high and low could be open or close prices, so we check weather the max and min values are
+                # in the api df call or in the trade object
                 trade.high = max(df['high'].max(), trade.open_price, trade.close_price)
                 trade.low = min(df['low'].min(), trade.open_price, trade.close_price)
 
@@ -348,8 +347,9 @@ class TraderMadeClient:
         trade: a trade of type Trade;
         fields: any of ['open', 'close', 'high', 'low'];
         interval= one of ['daily', 'hourly', 'minute']"""
-
+        # Create parameters for the API call
         params = self.build_params(endpoint=endpoint, **kwargs)
+        # Request call
         data = TraderMadeClient._get_request(params, endpoint=endpoint)
         return TraderMadeClient._parse_response(data, fields=fields)
 
@@ -358,7 +358,7 @@ class TraderMadeClient:
          fields: any of ['open', 'close', 'high', 'low'];
          trade: a trade of type Trade;
          time_unit: one of ['minute', 'hour', 'day']"""
-
+        # dictionary used to pass the correct time format depending on the interval used.
         interval_options = {
             'minute': TraderMadeClient._TM_DATE_FORMAT_MINUTE,
             'hour': TraderMadeClient._TM_DATE_FORMAT_MINUTE,
@@ -378,13 +378,13 @@ class TraderMadeClient:
         period: Daily Interval = 1
                 Hourly interval, choices are - 1, 2, 4, 6, 8, 24
                 Minute interval, choices are - 1, 5, 10, 15, 3"""
-
         if not interval:
             interval = TraderMadeClient._optimal_interval(trade)
 
         if not period:
             period = TraderMadeClient._get_optimal_period(trade.delta_time, interval)
 
+        # Correct API inconsistent inclusion/exclusion logic for start date
         tm_start_correction = TraderMadeClient._start_date_correction(interval, trade.open_time, trade.close_time)
 
         params = {
@@ -411,7 +411,6 @@ class TraderMadeClient:
                 Minute interval, choices are - 1, 5, 10, 15; 30;
         fields = list type ['open', 'close', 'high', 'low']
         time_unit = one of ['day', 'hour', 'minute']"""
-
         if endpoint == 'timeseries':
             return self._build_timeseries_params(**kwargs)
         elif endpoint in ['historical', 'hour_historical', 'minute_historical']:
@@ -423,7 +422,6 @@ class TraderMadeClient:
 
     def _set_api_key(self):
         """Sets the RESTful API, runs on instantiation"""
-
         try:
             tm.set_rest_api_key(self.api_key)
 
@@ -435,7 +433,6 @@ class TraderMadeClient:
         """make a request to tradermade.
          Type must be any of the available functionalities: 'timeseries', 'historical',
          'minute_historical', 'hourly_historical"""
-
         request_url = TraderMadeClient._BASE_URL + endpoint
         try:
             return requests.get(request_url, params).json()
@@ -447,21 +444,27 @@ class TraderMadeClient:
     def _optimal_interval(trade: Trade) -> str:
         """Selects the correct, most optimal interval ('daily', 'hourly', 'minute') to get tm.time_series info
          for a given trade"""
-
+        # get trade operation time open in seconds
         delta_time = trade.delta_time.total_seconds()
         day_in_seconds = 24 * 60 * 60
-        less_than_year_old = TraderMadeClient._is_recent_than(trade.open_time, days=365)
-        less_than_month_old = TraderMadeClient._is_recent_than(trade.open_time, days=29)
-
+        less_than_year_old = TraderMadeClient._is_recent_than(trade.open_time, days=TraderMadeClient._DAYS_IN_A_YEAR)
+        less_than_month_old = TraderMadeClient._is_recent_than(trade.open_time, days=TraderMadeClient._DAYS_IN_A_MONTH)
+        # Complex logic for deciding optimal interval type ahead
         interval = 'daily'
+        # we can only retrieve minute data from trades starting one month before the API call
         if less_than_month_old:
-            if delta_time < 2 * day_in_seconds:
+            # we can only retrieve minute time-series data from trades that are less than 2 days long
+            # (from opening time to closing time)
+            if delta_time < TraderMadeClient._MAX_DAYS_FOR_MINUTE_CALL * day_in_seconds:
                 interval = 'minute'
+            # if longer or equal to 2 days, we can use hourly, as hourly time-series calls can be called
+            # for 1 month long trades
             else:
                 interval = 'hourly'
-
+        # we can only retrieve hourly data from trades starting one year before the API call.
         elif less_than_year_old:
-            if delta_time < 29 * day_in_seconds:
+            # max trade time for hourly time-series data is month
+            if delta_time < TraderMadeClient._MAX_DAYS_FOR_DAILY_CALL * day_in_seconds:
                 interval = 'hourly'
         logger.info(f"{__name__} is less than month old: {less_than_month_old} less than_year_old {less_than_year_old}")
         return interval
@@ -470,26 +473,28 @@ class TraderMadeClient:
     def _get_optimal_period(delta_time: dt.timedelta, interval: str) -> int:
         """Selects the largest possible period for a trade,
          as of not to get unnecessary heavy responses from the timeseries request"""
-
         thresholds = {
             'minute': [
-                (60 * 12, 30),
-                (60 * 6, 15),
-                (60 * 2, 6),
-                (30, 2),
+                (60 * 12, 30),  # 30-minute period for trades longer than 12 hours
+                (60 * 6, 15),   # 15-minute period for trades longer than 6 hours
+                (60 * 2, 6),    # 6-minute period for trades longer than 2 hours
+                (30, 2),        # 2-minute period for trades longer than 30 minutes
+                (0, 1),         # 1-minute period for trades less than 30 minutes
             ],
+            # same logic applies
             'hourly': [
                 (60 * 24 * 15, 8),
                 (60 * 24 * 8, 6),
                 (60 * 24 * 4, 4),
-                (60 * 24 * 2, 2)
+                (60 * 24 * 2, 2),
+                (0, 1)
 
             ],
             'daily': [
                 (0, 1)
             ]}
 
-        if interval in ['minute', 'hourly', 'daily']:
+        if interval in TraderMadeClient._ACCEPTABLE_PERIODS:
             for threshold, period in thresholds[interval]:
                 if delta_time.total_seconds() / 60 > threshold:
                     return period
@@ -514,7 +519,6 @@ class TraderMadeClient:
     def _parse_response(data: dict, fields: list[str]) -> pd.DataFrame | dict:
         """Handles tradermade api request answer, returns data frame with [fields] columns if the call was correct.
          returns empty dataframe in any other case"""
-
         logger.info(f"{__name__} tradermade request keys: {data.keys()}")
         if "quotes" not in data:
             logger.info(f'quotes not in response {data}')
@@ -526,19 +530,20 @@ class TraderMadeClient:
                 df = df[["date"] + fields]
             except KeyError as e:
                 logger.warning(f"Some requested fields not found in data: {e}")
-                df = pd.DataFrame()
+                df = pd.DataFrame()  # if fields requested are not found, return empty dataframe
             finally:
-                logger.info(f"{__name__} dataframe from Tradermade\n {df.head()}")
+                logger.info(f"dataframe from Tradermade\n {df.head()}")
                 return df
 
     @staticmethod
     def _start_date_correction(interval: str, open_date: dt.datetime, close_date: dt.datetime) -> dt.timedelta:
         """Trader made won't get start_date data for daily intervals in some specific cases.
         This function fixes the malfunction, returning tm.timedelta(days=-1) to add it to date_start when needed"""
-
         if interval == 'daily':
+            # if an open date's hour is pass 5pm, we do not take into account that day. This is a temporal patch,
+            # better logic will be implemented
             if open_date.hour < 17 or open_date.day == close_date.day:
-                return dt.timedelta(days=-1)
+                return dt.timedelta(days=-1)  # a day less to ditch out the starting day
 
         return dt.timedelta(seconds=0)
 
