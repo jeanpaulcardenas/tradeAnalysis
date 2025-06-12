@@ -1,6 +1,6 @@
 # TradeAnalysis
 
-TradeAnalysis is a web application that loads MT4 (MetaTrader 4) trading history reports and provides in-depth analysis 
+TradeAnalysis is a web application that loads MT4 (MetaTrader 4) trading history reports files (.html) and provides in-depth analysis 
 and interactive data visualizations. It is designed for traders and analysts who want to understand and improve their 
 trading performance.
 
