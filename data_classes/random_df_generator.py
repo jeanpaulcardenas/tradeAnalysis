@@ -22,7 +22,7 @@ options = ['buy', 'sell']
 
 
 class RandDataGen:
-    def __init__(self, number_of_trades: int, max_weeks_total: int, max_weeks_per_trade: int, currency: str = 'EUR'):
+    def __init__(self, number_of_trades: int, max_weeks_total: int, max_weeks_per_trade: int, currency: str = 'USD'):
         self.n_trades = number_of_trades
         self.mw_total = max_weeks_total
         self.mw_trade = max_weeks_per_trade
@@ -84,8 +84,8 @@ class RandDataGen:
         self.data_dict['commission'] = zeros_list
         self.data_dict['taxes'] = zeros_list
         self.data_dict['swap'] = zeros_list
-        self.data_dict['base'] = [symbol[3:] for symbol in self.data_dict['symbol']]
-        self.data_dict['quote'] = [symbol[:3] for symbol in self.data_dict['symbol']]
+        self.data_dict['base'] = [symbol[:3] for symbol in self.data_dict['symbol']]
+        self.data_dict['quote'] = [symbol[3:] for symbol in self.data_dict['symbol']]
 
     @staticmethod
     def _random_pair_price(pair: str) -> float:
