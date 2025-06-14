@@ -44,17 +44,18 @@ class Balance:
     balance_type: str = ''
 
 
-# Parser class
-class TxtParser:
-    """Parser class, parses MT4 history report file"""
-    _ABOVE_TRADES_REF_LINE = '   <td>Price</td><td>Commission</td><td>Taxes</td><td>Swap</td><td>Profit</td></tr>'
+# Parser class. The .htm file from mt4 is not simple to parse trough pandas or other modules because of lag of tags and
+# only contains one 'table' tag. I've decided to parse it with beautifulsoup and re.
+class FileParser:
+    """Parser class, parses MT4 history report file (html or txt are accepted)"""
+    _ABOVE_TRADES_REF_LINE = 'Closed Transactions:'
     _ABOVE_ACCT_REF_LINE = '<tr align=left>'
 
     def __init__(self, txt: str):
         """txt is the raw html string of the mt4 statement"""
         self._raw_html = txt
-        self.my_html_list = TxtParser._create_html_list(self.raw_html)
-        logger.info(f"TxtParser creation")
+        self.my_html_list = FileParser._create_html_list(self.raw_html)
+        logger.info(f"FileParser creation")
 
     @classmethod
     def from_dash_upload(cls, uploaded_file, unicode_encoding='utf-8'):
@@ -75,25 +76,25 @@ class TxtParser:
 
     def get_operations_info(self) -> list[list[str]]:
         """returns a list with the meaningful data of the trades and balances of the MT4 operations report"""
-        operations_raw = TxtParser._extract_section_from_html_list(
+        operations_raw = FileParser._extract_section_from_html_list(
             my_list=self.my_html_list,
-            start=TxtParser._ABOVE_TRADES_REF_LINE,
+            start=FileParser._ABOVE_TRADES_REF_LINE,
         )
         operations_info = list()
         for line in operations_raw:
-            td_content = TxtParser._parse_td(line)
+            td_content = FileParser._parse_td(line)
             operations_info.append(td_content)  # adds all values in the trade row from operations table
         return operations_info
 
     def get_account_info(self) -> dict:
         """returns account, name, currency and leverage from MT4 report"""
-        acct_info_raw = TxtParser._extract_section_from_html_list(
+        acct_info_raw = FileParser._extract_section_from_html_list(
             my_list=self.my_html_list,
-            start=TxtParser._ABOVE_ACCT_REF_LINE,
+            start=FileParser._ABOVE_ACCT_REF_LINE,
         )
         acct_info = dict()
         for line in acct_info_raw:
-            td_content = TxtParser._parse_td(line)
+            td_content = FileParser._parse_td(line)
             values = re.split(r':', td_content[0])
 
             try:
@@ -109,12 +110,15 @@ class TxtParser:
         return my_txt_string.split('\n')
 
     @staticmethod
-    def _extract_section_from_html_list(my_list: list, start: str) -> list:
-        """slices txt from a line reference (string) to the next empty line, empty and start
+    def _extract_section_from_html_list(my_list: list[str], start: str) -> list:
+        """slices 'my_list' from a line reference (string) to the next empty line, empty and start
          line not included in returned list"""
-        try:
-            start_idx = my_list.index(start)  # index of the line where operation's table starts
-        except ValueError:
+
+        for idx, line in enumerate(my_list):
+            if start in line:
+                start_idx = idx
+                break
+        else:
             raise ValueError(f"Start line '{start}' not found in HTML content.")
 
         sliced_list = my_list[start_idx + 1:]  # sliced from the start of the trade's table to the end of the file
@@ -142,7 +146,7 @@ class TxtParser:
 class TradeData:
     _HTML_DATE_SOURCE_FORMAT = "%Y.%m.%d %H:%M:%S"
 
-    def __init__(self, trades_info: TxtParser):
+    def __init__(self, trades_info: FileParser):
         self.raw_operations = trades_info.get_operations_info()
         self._currency = trades_info.get_account_info()['currency']
         self._trades_raw = []
@@ -554,7 +558,7 @@ class TraderMadeClient:
 
 
 if __name__ == '__main__':
-    aux = TxtParser.from_filepath('../data/statement.txt')
+    aux = FileParser.from_filepath('../data/statement.htm')
     operations_infonow = aux.get_operations_info()
     now = TradeData(aux)
 
