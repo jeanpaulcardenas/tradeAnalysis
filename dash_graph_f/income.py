@@ -1,5 +1,5 @@
-from data_classes.statistics import Metrics
-from config import get_logger, _METRICS_DF_KEYS,_PLOTLY_GRAPH_TEMPLATE, _PLOTLY_GRAPH_COLORS, _COLORS
+from data_classes.statistics_m import Metrics
+from config import get_logger, _METRICS_DF_KEYS, _PLOTLY_GRAPH_TEMPLATE, _PLOTLY_GRAPH_COLORS, _COLORS
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px

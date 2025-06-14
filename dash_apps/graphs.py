@@ -1,6 +1,7 @@
 from dash import dash, dcc, html, callback
 from dash.dependencies import Input, Output
-from data_classes.statistics import Metrics, metrics_between_dates
+from data_classes.statistics_m import Metrics, metrics_between_dates
+from dash_graph_f.graph_high_low import WonVsPerfectHistogram
 from dash_graph_f.income import ScatterGraph, BarGraph, SunBurst, TimeOpenIncome
 from config import _INCOME_DROPDOWN_OPTIONS, _BARS_DROPDOWN_OPTIONS, _METRICS_DROPDOWN_OPTIONS, \
     _TIME_TYPE_OPTIONS, _TIME_TYPE_DICT, get_logger
@@ -79,6 +80,8 @@ def app_layout(start_date, end_date) -> dash.html.Div:
         ),
         dcc.Graph(id='time graph'),
         html.Br(),
+        dcc.Graph(id='histogram'),
+        html.Br(),
         html.Br()
     ])
 
@@ -93,7 +96,8 @@ app.layout = app_layout(start_date=start, end_date=end)
     [Output('income graph', 'figure'),
      Output('bars graph', 'figure'),
      Output('sunburst', 'figure'),
-     Output('time graph', 'figure')],
+     Output('time graph', 'figure'),
+     Output('histogram', 'figure')],
     [Input('metric dropdown', 'value'),
      Input('date range', 'start_date'),
      Input('date range', 'end_date'),
@@ -121,6 +125,8 @@ def update_charts(measure, start_date, end_date, inc_choice, bars_choice, time_s
                                 title='Time open vs Income',
                                 **_TIME_TYPE_DICT[time_style]).get_figure()
 
-    return [income_graph, bars_graph, sunburst, time_graph]
+    histogram = WonVsPerfectHistogram(metrics_obj).get_figure()
+
+    return [income_graph, bars_graph, sunburst, time_graph, histogram]
 
 

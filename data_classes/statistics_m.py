@@ -119,7 +119,7 @@ class Metrics:
     @property
     @zero_division_to_zero
     def expectancy(self) -> float:
-        """	Shows average expected outcome per trade — excellent for evaluation."""
+        """	Shows average expected outcome per trade."""
         return self.net_income / self.n_of_trades
 
     @property
@@ -223,7 +223,8 @@ class Metrics:
 
         Columns: max_possible_gain, max_possible_loss, day_of_week, won_trade, accumulative_profit, 'pips'"""
 
-        self.df['max_possible_gain'] = self.df.apply(func=lambda row: round(self._get_max_gain(row, False), 2), axis='columns')
+        self.df['max_possible_gain'] = self.df.apply(func=lambda row: round(self._get_max_gain(row, False), 2),
+                                                     axis='columns')
         self.df['max_possible_loss'] = self.df.apply(func=lambda row: round(self._get_max_gain(row, True), 2),
                                                      axis='columns')
         self.df['cum_profit'] = self.df.profit.cumsum()
