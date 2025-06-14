@@ -10,11 +10,11 @@ logger = get_logger(__name__)
 class ScatterGraph:
     _PLOTLY_GRAPH_TEMPLATE = 'plotly_dark'
 
-    def __init__(self, metrics_obj: Metrics, choice: str, pips: bool, title: str):
+    def __init__(self, metrics_obj: Metrics, subplots_choice: str, pips: bool, title: str):
         self._measure = 'pips' if pips else 'profit'
         self._metrics_obj = metrics_obj
         self._df = self.metrics_obj.df
-        self._choice = choice
+        self._subplots_choice = subplots_choice
         self._fig = go.Figure()
         self.fig.update_layout(self._layout(title))
 
@@ -29,9 +29,9 @@ class ScatterGraph:
         return self._df
 
     @property
-    def choice(self) -> str:
-        """Returns choice selection."""
-        return self._choice
+    def subplots_choice(self) -> str:
+        """Returns subplots_choice selection."""
+        return self._subplots_choice
 
     @property
     def fig(self) -> go.Figure:
@@ -44,8 +44,8 @@ class ScatterGraph:
         return self._measure
 
     def get_figure(self) -> go.Figure:
-        """Returns a scatter plot figure. Plots are dependant on self.choice"""
-        objs = self._create_dataframes(choice=self.choice)
+        """Returns a scatter plot figure. Plots are dependent on self.subplots_choice"""
+        objs = self._create_dataframes(subplots_choice=self.subplots_choice)
         for i, df in enumerate(objs):
             name = self._get_legend_name(df=df)
             x = [df.open_time[0]] + df.close_time.to_list()  # adding open_time[0] value at index 0
@@ -77,28 +77,29 @@ class ScatterGraph:
                     ),
                     **kwargs)
 
-    def _create_dataframes(self, choice: str) -> list[pd.DataFrame]:
-        """returns dataframes for the given choice. e.g. if choice == pairs, returns a dataframe for each unique pair
+    def _create_dataframes(self, subplots_choice: str) -> list[pd.DataFrame]:
+        """returns dataframes for the given subplots_choice. e.g. if subplots_choice == pairs, returns a dataframe for each unique pair
         containing only data with that pair symbol."""
         try:
-            if choice == 0:  # if there is no choice return self.df, this will lead a global income figure
+            if subplots_choice == 0:  # if there is no subplots_choice return self.df, this will lead a global income figure
                 return [self.df]
-            elif choice in _METRICS_DF_KEYS:
-                # Create a list a dataframes, one for each unique self.df[choice],
-                # e.g. self.df[choice].unique = ['EURUSD', 'USDJPY']
-                return [self.df[self.df[choice] == item].reset_index(drop=True) for item in self.df[choice].unique()]
+            elif subplots_choice in _METRICS_DF_KEYS:
+                # Create a list a dataframes, one for each unique self.df[subplots_choice],
+                # e.g. self.df[subplots_choice].unique = ['EURUSD', 'USDJPY']
+                return [self.df[self.df[subplots_choice] == item].reset_index(drop=True)
+                        for item in self.df[subplots_choice].unique()]
         except KeyError:
-            logger.error(f"Error. choice for IncomeGraph {choice} not valid")
+            logger.error(f"Error. subplots_choice for IncomeGraph {subplots_choice} not valid")
             return [pd.DataFrame()]
 
     def _get_legend_name(self, df: pd.DataFrame) -> str:
-        """Gets the corresponding legend name by user's choice (self.choice)."""
-        if self.choice:
+        """Gets the corresponding legend name by user's subplots_choice (self.subplots_choice)."""
+        if self.subplots_choice:
             try:
-                name = df[self.choice][0]
+                name = df[self.subplots_choice][0]
             except KeyError:
                 name = None
-                logger.warning(f"couldn't find df[{self.choice}][0], no name given to legend")
+                logger.warning(f"couldn't find df[{self.subplots_choice}][0], no name given to legend")
         else:
             name = "All trades"
         return name
@@ -137,15 +138,15 @@ class ScatterGraph:
 
 
 class TimeOpenIncome(ScatterGraph):
-    def __init__(self, metrics_obj, choice, pips, title, ceiling: int, denominator: int, period: str):
-        super(TimeOpenIncome, self).__init__(metrics_obj, choice, pips, title)
+    def __init__(self, metrics_obj, subplots_choice, pips, title, ceiling: int, denominator: int, period: str):
+        super(TimeOpenIncome, self).__init__(metrics_obj, subplots_choice, pips, title)
         self.ceiling = ceiling
         self.denominator = denominator
         self.period = period
 
     def get_figure(self) -> go.Figure:
-        """Returns a scatter plot figure. Plots are dependant on self.choice"""
-        objs = self._create_dataframes(choice=self.choice)
+        """Returns a scatter plot figure. Plots are dependant on self.subplots_choice"""
+        objs = self._create_dataframes(subplots_choice=self.subplots_choice)
         for i, df in enumerate(objs):
             name = self._get_legend_name(df=df)
             df = self._filter_by_style(df)
@@ -179,9 +180,9 @@ class TimeOpenIncome(ScatterGraph):
 
 
 class BarGraph:
-    def __init__(self, metrics_obj: Metrics, choice: str, period: str):
+    def __init__(self, metrics_obj: Metrics, subplots_choice: str, period: str):
         self.metrics = metrics_obj
-        self.choice = choice
+        self.subplots_choice = subplots_choice
         self.df = self.metrics.df
         self.period = period
 
@@ -214,7 +215,7 @@ class BarGraph:
     def _crate_dataframe(self) -> pd.DataFrame:
         """Create grouped dataframe with columns df[column].unique() and their values are profit and the
         frequency is grouped by 'self.period' close_date."""
-        dataframe = self.metrics.income_by_period(column=self.choice, frequency=self.period)
+        dataframe = self.metrics.income_by_period(column=self.subplots_choice, frequency=self.period)
 
         return dataframe
 

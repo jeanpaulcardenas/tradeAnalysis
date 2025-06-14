@@ -1,7 +1,7 @@
 from dash import dash, dcc, html, callback
 from dash.dependencies import Input, Output
 from data_classes.statistics_m import Metrics, metrics_between_dates
-from dash_graph_f.graph_high_low import WonVsPerfectHistogram
+from dash_graph_f.graph_high_low import CouldWinTrades, WonVsBestDiff
 from dash_graph_f.income import ScatterGraph, BarGraph, SunBurst, TimeOpenIncome
 from config import _INCOME_DROPDOWN_OPTIONS, _BARS_DROPDOWN_OPTIONS, _METRICS_DROPDOWN_OPTIONS, \
     _TIME_TYPE_OPTIONS, _TIME_TYPE_DICT, get_logger
@@ -80,7 +80,9 @@ def app_layout(start_date, end_date) -> dash.html.Div:
         ),
         dcc.Graph(id='time graph'),
         html.Br(),
-        dcc.Graph(id='histogram'),
+        dcc.Graph(id='box: could have won'),
+        html.Br(),
+        dcc.Graph(id='box: real vs max'),
         html.Br(),
         html.Br()
     ])
@@ -97,36 +99,40 @@ app.layout = app_layout(start_date=start, end_date=end)
      Output('bars graph', 'figure'),
      Output('sunburst', 'figure'),
      Output('time graph', 'figure'),
-     Output('histogram', 'figure')],
+     Output('box: could have won', 'figure'),
+     Output('box: real vs max', 'figure')],
     [Input('metric dropdown', 'value'),
      Input('date range', 'start_date'),
      Input('date range', 'end_date'),
      Input('income dropdown', 'value'),
      Input('bars dropdown', 'value'),
      Input('time style', 'value')])
-def update_charts(measure, start_date, end_date, inc_choice, bars_choice, time_style):
+def update_charts(measure, start_date, end_date, subplots_choice, bars_choice, time_style):
 
     metrics_obj = metrics_between_dates(random_metric, start_date=start_date, end_date=end_date)
 
     income_graph = ScatterGraph(metrics_obj=metrics_obj,
-                                choice=inc_choice,
+                                subplots_choice=subplots_choice,
                                 pips=measure,
                                 title='Cumulative Income').get_figure()
 
     bars_graph = BarGraph(metrics_obj=metrics_obj,
-                          choice=inc_choice,
+                          subplots_choice=subplots_choice,
                           period=bars_choice).get_figure()
 
     sunburst = SunBurst(metrics_obj).get_figure()
 
     time_graph = TimeOpenIncome(metrics_obj=metrics_obj,
-                                choice=inc_choice,
+                                subplots_choice=subplots_choice,
                                 pips=measure,
                                 title='Time open vs Income',
                                 **_TIME_TYPE_DICT[time_style]).get_figure()
 
-    histogram = WonVsPerfectHistogram(metrics_obj).get_figure()
+    could_win = CouldWinTrades(metrics_obj,
+                               subplots_choice=subplots_choice,
+                               title='Trades you could have won').get_figure()
+    real_vs_max = WonVsBestDiff(metrics_obj,
+                                subplots_choice,
+                                title='Real Profit vs Max Possible Profit').get_figure()
 
-    return [income_graph, bars_graph, sunburst, time_graph, histogram]
-
-
+    return [income_graph, bars_graph, sunburst, time_graph, could_win, real_vs_max]
