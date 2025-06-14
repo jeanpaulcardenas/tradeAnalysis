@@ -21,6 +21,7 @@ trading performance.
 ![](https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNzdicjM1dnFwdWMyOWRuOWUxdzg5bTB6YTZ3YTQ4a2dibXBlZzJ4eiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ylmPcsguQ8rBe1NitK/giphy.gif)
 ![](https://imgur.com/9Wn9rHy.gif)
 ![](https://imgur.com/lHQ46ZB.gif)
+![](https://i.imgur.com/pcURBza.gif)
 
 ---
 
