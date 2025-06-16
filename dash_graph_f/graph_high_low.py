@@ -8,6 +8,35 @@ logger = get_logger(__name__)
 _PLOTLY_GRAPH_TEMPLATE = 'plotly_dark'
 
 
+def normalize_data(data: pd.Series):
+    """Normalize a list of float values to range (0, 1) where the min value is 0 and largest is 1"""
+    sample_max = max(data)
+    sample_min = min(data)
+
+    def print_cond_data(a: pd.Series, mssg: str):
+        """log condition satisfied and its data"""
+        logger.info(f'{mssg} in:\n {a}')
+
+    if len(data) < 2:
+        return data
+    elif not list(filter(lambda x: x > 0, data)):
+        # if there is no positive value in data, then normalize from 0 to 0.5
+        print_cond_data(data, 'all negative numbers')
+        return list(map(lambda x: (x - sample_min) / (2 * (sample_max - sample_min)), data))
+    elif not list(filter(lambda x: x < 0, data)):
+        print_cond_data(data, 'all positive')
+        # if data is positive: this way avoids turning positive values to zero, which is a better interpretation
+        # of metrics, considering this function will be used to plot radars. e.g. in a list of PFs with minimum value of
+        # 2.8, the above formula would turn it to 0, which would point to the base of the radar indicating 'bad',
+        # that would be a bad interpretation
+        return list(map(lambda x: (x / sample_max), data))
+
+    else:
+        print_cond_data(data, 'some negative but not all')
+        # normalize the list this way if it contains negative numbers. The most negative number is the '0' val reference
+        return list(map(lambda x: (x - sample_min) / (sample_max - sample_min), data))
+
+
 class BoxGraph:
     def __init__(self, metrics_obj: Metrics, subplots_choice: str, title: str):
         self._metrics = metrics_obj
@@ -121,8 +150,8 @@ class WonVsBestDiff(BoxGraph):
 
     @property
     def hover_template(self):
-        return f'<b>Difference: </b> %{{y}} <br>'\
-               f'<b>Profit: </b> %{{customdata[0]:,d}} {self.metrics.currency_symbol} <br>'\
+        return f'<b>Difference: </b> %{{y}} <br>' \
+               f'<b>Profit: </b> %{{customdata[0]:,d}} {self.metrics.currency_symbol} <br>' \
                f'<b>Max reached</b>: %{{customdata[1]:,d}} {self.metrics.currency_symbol}<br>' \
                f'<b>Order: </b> %{{customdata[2]:d}}'
 
@@ -139,7 +168,58 @@ class WonVsBestDiff(BoxGraph):
         wins_df = WonVsBestDiff._won_trades_df(df)
         max_vs_real_diff = wins_df['max_possible_gain'] - wins_df['profit']
         return max_vs_real_diff
-#
+
+
+class MetricsRadar(BoxGraph):
+    _THETA = ['Profit factor', 'Efficiency', 'Times traded', 'Average Profit']
+    _THETA_ACCESS = ['profit_factor', 'efficiency', 'n_of_trades', 'expectancy']
+
+    def __init__(self, metrics: Metrics, subplots_choice: str, title: str):
+        super(MetricsRadar, self).__init__(metrics, subplots_choice, title)
+        self._unique_df_ids = self.metrics.df[self.subplots_choice].unique()
+
+    @property
+    def unique_df_ids(self) -> list[str]:
+        return self._unique_df_ids
+
+    def get_figure(self):
+        kpi_df = self._normalize_kpi_df()
+        for idx, (name, values) in enumerate(kpi_df.items()):
+            r = values.to_list()
+            print(r)
+            r += [r[0]]
+            theta = MetricsRadar._THETA
+            theta += [theta[0]]
+            self.fig.add_trace(go.Scatterpolar(
+                theta=theta,
+                r=r,
+                name=name,
+                marker=dict(color=_PLOTLY_GRAPH_COLORS[idx]),
+            ))
+        return self.fig
+
+    def _get_subplots_metrics(self) -> dict:
+        if self.subplots_choice:
+            return {key: Metrics(df, pd.DataFrame(), self.metrics.currency_symbol)
+                    for key, df in zip(self.unique_df_ids, self.dfs)}
+        else:
+            return {'all': self.metrics}
+
+    def _create_kpi_df(self) -> pd.DataFrame:
+        metrics = self._get_subplots_metrics()
+        kpis = {name: [getattr(metric, name) for metric in metrics.values()] for name in MetricsRadar._THETA_ACCESS}
+        kpi_df = pd.DataFrame(data=kpis.values(), index=list(kpis.keys()), columns=self.unique_df_ids)
+        logger.info(f'kpis:\n{kpi_df.head()}')
+        return kpi_df
+
+    def _normalize_kpi_df(self):
+        kpi_df = self._create_kpi_df()
+        for idx in kpi_df.index:
+            kpi_df.loc[idx] = normalize_data(kpi_df.loc[idx])
+        logger.info(f"normalized kpis:\n{kpi_df.head().to_string()}")
+        return kpi_df
+
+
 # class CountProfitHistogram:
 #     def __init__(self, metrics_obj: Metrics):
 #         self.metrics = metrics_obj
