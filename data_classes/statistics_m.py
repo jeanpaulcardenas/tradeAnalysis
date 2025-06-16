@@ -42,7 +42,7 @@ class Metrics:
     }
 
     def __init__(self, trades_df: pd.DataFrame, balance_df: pd.DataFrame, currency: str):
-        self.df = trades_df
+        self.df = trades_df.reset_index(drop=True)
         self.balance_df = balance_df
         self._currency = currency.upper()
         if not self.df.empty:
@@ -143,7 +143,7 @@ class Metrics:
     @zero_division_to_zero
     def profit_factor(self) -> float:
         """Profit factor: gross loss / gross gross_revenue"""
-        return self.gross_revenue / self.gross_loss
+        return abs(self.gross_revenue / self.gross_loss)
 
     @property
     def perfect_efficiency_income(self) -> float:
