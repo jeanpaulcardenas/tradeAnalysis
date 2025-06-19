@@ -177,19 +177,22 @@ class MetricsRadar(BoxGraph):
     def __init__(self, metrics: Metrics, subplots_choice: str, title: str):
         super(MetricsRadar, self).__init__(metrics, subplots_choice, title)
         self._unique_df_ids = self.metrics.df[self.subplots_choice].unique()
+        self._delete_radar_axis_ticks()
 
-    @property
-    def unique_df_ids(self) -> list[str]:
-        return self._unique_df_ids
-
-    def get_figure(self):
-        kpi_df = self._normalize_kpi_df()
+    def get_figure(self) -> go.Figure | None:
+        """Returns a radar (scatter polar graph) with normalized profit factors, efficiencies,
+         amount of trades and expectancies"""
+        if len(self.unique_df_ids) < 2:
+            # don't return a figure if there's only one metric object to plot. This radar uses normalized values
+            # we cant normalize KPI if there's only one float value for each KPI
+            return None
+        kpi_df = self._normalized_kpi_df()
+        # name : KPI metric identifier e.g. 'monday'. values: KPI values in _THETA_ACCESS for the given metrics object
         for idx, (name, values) in enumerate(kpi_df.items()):
             r = values.to_list()
-            print(r)
-            r += [r[0]]
+            r += [r[0]]  # we append the first r value to close the line graph of the radar, it's a style choice
             theta = MetricsRadar._THETA
-            theta += [theta[0]]
+            theta += [theta[0]]  # we append the first theta value to close the line graph of the radar plot
             self.fig.add_trace(go.Scatterpolar(
                 theta=theta,
                 r=r,
@@ -198,7 +201,13 @@ class MetricsRadar(BoxGraph):
             ))
         return self.fig
 
+    @property
+    def unique_df_ids(self) -> list[str]:
+        """Return string names for each subset"""
+        return self._unique_df_ids
+
     def _get_subplots_metrics(self) -> dict:
+        """gets metrics for all unique subplot dataframes"""
         if self.subplots_choice:
             return {key: Metrics(df, pd.DataFrame(), self.metrics.currency_symbol)
                     for key, df in zip(self.unique_df_ids, self.dfs)}
@@ -206,18 +215,32 @@ class MetricsRadar(BoxGraph):
             return {'all': self.metrics}
 
     def _create_kpi_df(self) -> pd.DataFrame:
+        """creates a dataframe with columns as the unique subset identifiers (e.g. ['USDCAD', 'EURGBP',...]) and
+        index ['profit_factor', 'efficiency', 'n_of_trades', 'expectancy']."""
         metrics = self._get_subplots_metrics()
         kpis = {name: [getattr(metric, name) for metric in metrics.values()] for name in MetricsRadar._THETA_ACCESS}
         kpi_df = pd.DataFrame(data=kpis.values(), index=list(kpis.keys()), columns=self.unique_df_ids)
         logger.info(f'kpis:\n{kpi_df.head()}')
         return kpi_df
 
-    def _normalize_kpi_df(self):
+    def _normalized_kpi_df(self):
+        """returns normalized dataframe with columns as the unique subset identifiers (e.g. ['USDCAD', 'EURGBP',...])
+        and index ['profit_factor', 'efficiency', 'n_of_trades', 'expectancy']"""
         kpi_df = self._create_kpi_df()
         for idx in kpi_df.index:
             kpi_df.loc[idx] = normalize_data(kpi_df.loc[idx])
         logger.info(f"normalized kpis:\n{kpi_df.head().to_string()}")
         return kpi_df
+
+    def _delete_radar_axis_ticks(self):
+        """Hides radar axis tick labels."""
+        self.fig.update_layout(
+            polar=dict(
+                radialaxis=dict(
+                    showticklabels=False
+                )
+            )
+        )
 
 
 # class CountProfitHistogram:

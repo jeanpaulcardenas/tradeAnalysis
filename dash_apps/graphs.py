@@ -3,7 +3,7 @@ from dash.dependencies import Input, Output
 from data_classes.statistics_m import Metrics, metrics_between_dates
 from dash_graph_f.graph_high_low import CouldWinTrades, WonVsBestDiff, MetricsRadar
 from dash_graph_f.income import ScatterGraph, BarGraph, SunBurst, TimeOpenIncome
-from config import _INCOME_DROPDOWN_OPTIONS, _BARS_DROPDOWN_OPTIONS, _METRICS_DROPDOWN_OPTIONS, \
+from config import _inc_dropdown_options, _BARS_DROPDOWN_OPTIONS, _METRICS_DROPDOWN_OPTIONS, \
     _TIME_TYPE_OPTIONS, _TIME_TYPE_DICT, get_logger
 import pandas as pd
 import datetime as dt
@@ -56,7 +56,7 @@ def app_layout(start_date, end_date) -> dash.html.Div:
 
         ),
         dcc.Dropdown(
-            options=_INCOME_DROPDOWN_OPTIONS,
+            options=_inc_dropdown_options(),
             value=0,
             id='income dropdown'
         ),
@@ -84,6 +84,11 @@ def app_layout(start_date, end_date) -> dash.html.Div:
         html.Br(),
         dcc.Graph(id='box: real vs max'),
         html.Br(),
+        dcc.Dropdown(
+            options=_inc_dropdown_options(all_values=True),
+            value='symbol',
+            id='radar option'
+        ),
         dcc.Graph(id='kpi radar'),
         html.Br(),
         html.Br()
@@ -109,8 +114,9 @@ app.layout = app_layout(start_date=start, end_date=end)
      Input('date range', 'end_date'),
      Input('income dropdown', 'value'),
      Input('bars dropdown', 'value'),
-     Input('time style', 'value')])
-def update_charts(measure, start_date, end_date, subplots_choice, bars_choice, time_style):
+     Input('time style', 'value'),
+     Input('radar option', 'value')])
+def update_charts(measure, start_date, end_date, subplots_choice, bars_choice, time_style, radar_choice):
 
     metrics_obj = metrics_between_dates(random_metric, start_date=start_date, end_date=end_date)
 
@@ -138,6 +144,6 @@ def update_charts(measure, start_date, end_date, subplots_choice, bars_choice, t
                                 subplots_choice,
                                 title='Real Profit vs Max Possible Profit').get_figure()
 
-    radar = MetricsRadar(metrics_obj, subplots_choice, title='KPI Radar').get_figure()
+    radar = MetricsRadar(metrics_obj, radar_choice, title='KPI Radar').get_figure()
 
     return [income_graph, bars_graph, sunburst, time_graph, could_win, real_vs_max, radar]
