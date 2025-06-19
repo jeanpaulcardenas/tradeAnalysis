@@ -35,6 +35,7 @@ class Trade:
     base: str = ''
     quote: str = ''
 
+
 # balance dataclass created to maintain well-defined data types
 @dataclass
 class Balance:

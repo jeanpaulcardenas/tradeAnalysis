@@ -8,33 +8,35 @@ logger = get_logger(__name__)
 _PLOTLY_GRAPH_TEMPLATE = 'plotly_dark'
 
 
-def normalize_data(data: pd.Series):
+def normalize_data(data: pd.Series) -> list[float]:
     """Normalize a list of float values to range (0, 1) where the min value is 0 and largest is 1"""
     sample_max = max(data)
     sample_min = min(data)
-
-    def print_cond_data(a: pd.Series, mssg: str):
-        """log condition satisfied and its data"""
-        logger.info(f'{mssg} in:\n {a}')
-
+    denominator = sample_max - sample_min
     if len(data) < 2:
-        return data
-    elif not list(filter(lambda x: x > 0, data)):
-        # if there is no positive value in data, then normalize from 0 to 0.5
-        print_cond_data(data, 'all negative numbers')
-        return list(map(lambda x: (x - sample_min) / (2 * (sample_max - sample_min)), data))
+        return data.to_list()
+
     elif not list(filter(lambda x: x < 0, data)):
-        print_cond_data(data, 'all positive')
         # if data is positive: this way avoids turning positive values to zero, which is a better interpretation
         # of metrics, considering this function will be used to plot radars. e.g. in a list of PFs with minimum value of
         # 2.8, the above formula would turn it to 0, which would point to the base of the radar indicating 'bad',
         # that would be a bad interpretation
         return list(map(lambda x: (x / sample_max), data))
 
+    elif denominator:
+        if not list(filter(lambda x: x > 0, data)):
+            # if there is no positive value in data, then normalize from 0 to 0.5
+            normalized = list(map(lambda x: (x - sample_min) / (2 * denominator), data))
+            return normalized
+        else:
+            # normalize the list this way if it contains negative numbers.
+            # The most negative number is the '0' val reference
+            normalized = list(map(lambda x: (x - sample_min) / denominator, data))
+            return normalized
     else:
-        print_cond_data(data, 'some negative but not all')
-        # normalize the list this way if it contains negative numbers. The most negative number is the '0' val reference
-        return list(map(lambda x: (x - sample_min) / (sample_max - sample_min), data))
+        # if denominator == 0 then return list of zeros
+        return [0 for _ in data]
+
 
 
 class BoxGraph:
@@ -173,6 +175,7 @@ class WonVsBestDiff(BoxGraph):
 class MetricsRadar(BoxGraph):
     _THETA = ['Profit factor', 'Efficiency', 'Times traded', 'Average Profit']
     _THETA_ACCESS = ['profit_factor', 'efficiency', 'n_of_trades', 'expectancy']
+    _HOVER_TEMPLATE = '<b>%{theta}</b>: %{customdata[0]:.2f}<extra></extra>'
 
     def __init__(self, metrics: Metrics, subplots_choice: str, title: str):
         super(MetricsRadar, self).__init__(metrics, subplots_choice, title)
@@ -186,18 +189,26 @@ class MetricsRadar(BoxGraph):
             # don't return a figure if there's only one metric object to plot. This radar uses normalized values
             # we cant normalize KPI if there's only one float value for each KPI
             return None
-        kpi_df = self._normalized_kpi_df()
+        normed_kpi_df = self._normalized_kpi_df()
+        real_kpi_df = self._create_kpi_df()
         # name : KPI metric identifier e.g. 'monday'. values: KPI values in _THETA_ACCESS for the given metrics object
-        for idx, (name, values) in enumerate(kpi_df.items()):
+        for idx, ((name, values), (name_2, real_vals)) in enumerate(zip(normed_kpi_df.items(), real_kpi_df.items())):
             r = values.to_list()
             r += [r[0]]  # we append the first r value to close the line graph of the radar, it's a style choice
+            r_real = real_vals.to_list()
+            r_real += [r_real[0]],
+            print(name)
             theta = MetricsRadar._THETA
-            theta += [theta[0]]  # we append the first theta value to close the line graph of the radar plot
+            print(r, r_real, theta)
             self.fig.add_trace(go.Scatterpolar(
-                theta=theta,
+                theta=theta + [theta[0]],
                 r=r,
+                customdata=[[v] for v in r_real],
                 name=name,
-                marker=dict(color=_PLOTLY_GRAPH_COLORS[idx]),
+                marker=dict(
+                    color=_PLOTLY_GRAPH_COLORS[idx]
+                ),
+                hovertemplate=MetricsRadar._HOVER_TEMPLATE
             ))
         return self.fig
 
@@ -223,7 +234,7 @@ class MetricsRadar(BoxGraph):
         logger.info(f'kpis:\n{kpi_df.head()}')
         return kpi_df
 
-    def _normalized_kpi_df(self):
+    def _normalized_kpi_df(self) -> pd.DataFrame:
         """returns normalized dataframe with columns as the unique subset identifiers (e.g. ['USDCAD', 'EURGBP',...])
         and index ['profit_factor', 'efficiency', 'n_of_trades', 'expectancy']"""
         kpi_df = self._create_kpi_df()
@@ -237,30 +248,9 @@ class MetricsRadar(BoxGraph):
         self.fig.update_layout(
             polar=dict(
                 radialaxis=dict(
-                    showticklabels=False
+                    showticklabels=False,
                 )
             )
         )
 
 
-# class CountProfitHistogram:
-#     def __init__(self, metrics_obj: Metrics):
-#         self.metrics = metrics_obj
-#
-#     def get_figure(self):
-#         won_trades_data = self.metrics.df['profit'][self.metrics.df['won_trade'] == True]
-#         df = self.metrics.df[self.metrics.df['won_trade'] == True]
-#         perfect_trades_data = self.metrics.df['max_possible_gain'][self.metrics.df['won_trade'] == True]
-#         bin_size = perfect_trades_data.mean() / 10
-#         labels = ['won trades', 'perfect possible result']
-#         print(self.metrics.df.to_string())
-#         fig = px.histogram(df, x='profit', color='symbol')
-#         return fig
-#
-#
-# class WonVsPerfectHistogram:
-#     def __init__(self, metrics_obj: Metrics):
-#         self.metrics = metrics_obj
-#
-#     def get_figure(self):
-#         return None

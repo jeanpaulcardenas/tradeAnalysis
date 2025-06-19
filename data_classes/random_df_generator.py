@@ -4,7 +4,6 @@ import random
 import datetime as dt
 import pickle
 
-
 logger = get_logger(__name__)
 PAIRS_RANGE_VAL = {
     'EURUSD': [1.2, 0.95],
@@ -45,7 +44,8 @@ class RandDataGen:
         """Add 'profit' key and it's values to 'self.dict'. For pairs that don't contain the account
         currency the profit value is calculated as if the base currency was the account currency (very inaccurate)."""
         open_price, close_price, vol, symbol, order_type = \
-        [self.data_dict[key_string] for key_string in ['open_price', 'close_price', 'volume', 'symbol', 'order_type']]
+            [self.data_dict[key_string] for key_string in
+             ['open_price', 'close_price', 'volume', 'symbol', 'order_type']]
 
         lot = 10 ** 5
         profits = []
@@ -71,7 +71,7 @@ class RandDataGen:
         self.data_dict['open_price'] = [RandDataGen._random_pair_price(pair) for pair in self.data_dict['symbol']]
         self.data_dict['close_price'] = [RandDataGen._get_close_val(vi) for vi in self.data_dict['open_price']]
         self.data_dict['delta_time'] = [end_date - start_date for end_date, start_date in
-                                         zip(self.data_dict['close_time'], self.data_dict['open_time'])]
+                                        zip(self.data_dict['close_time'], self.data_dict['open_time'])]
         self.data_dict['high'] = [RandDataGen._random_high(vi, vf)
                                   for vi, vf in zip(self.data_dict['open_price'], self.data_dict['close_price'])]
 

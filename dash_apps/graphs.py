@@ -3,7 +3,7 @@ from dash.dependencies import Input, Output
 from data_classes.statistics_m import Metrics, metrics_between_dates
 from dash_graph_f.graph_high_low import CouldWinTrades, WonVsBestDiff, MetricsRadar
 from dash_graph_f.income import ScatterGraph, BarGraph, SunBurst, TimeOpenIncome
-from config import _inc_dropdown_options, _BARS_DROPDOWN_OPTIONS, _METRICS_DROPDOWN_OPTIONS, \
+from config import _INCOME_DROPDOWN_OPTIONS, _BARS_DROPDOWN_OPTIONS, _METRICS_DROPDOWN_OPTIONS, \
     _TIME_TYPE_OPTIONS, _TIME_TYPE_DICT, get_logger
 import pandas as pd
 import datetime as dt
@@ -56,7 +56,7 @@ def app_layout(start_date, end_date) -> dash.html.Div:
 
         ),
         dcc.Dropdown(
-            options=_inc_dropdown_options(),
+            options=_INCOME_DROPDOWN_OPTIONS,
             value=0,
             id='income dropdown'
         ),
@@ -85,7 +85,7 @@ def app_layout(start_date, end_date) -> dash.html.Div:
         dcc.Graph(id='box: real vs max'),
         html.Br(),
         dcc.Dropdown(
-            options=_inc_dropdown_options(all_values=True),
+            options=_INCOME_DROPDOWN_OPTIONS[1:],
             value='symbol',
             id='radar option'
         ),
