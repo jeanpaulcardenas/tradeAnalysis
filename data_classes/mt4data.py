@@ -560,7 +560,6 @@ class TraderMadeClient:
 
 if __name__ == '__main__':
     aux = FileParser.from_filepath('../data/statement.htm')
-    operations_infonow = aux.get_operations_info()
     now = TradeData(aux)
 
     tm_client = TraderMadeClient(_TM_API_KEY)
