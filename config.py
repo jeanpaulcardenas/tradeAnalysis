@@ -136,7 +136,9 @@ _INCOME_DROPDOWN_OPTIONS = [
 
 _COLORS = {
     'blue': 'rgb(0, 80, 250)',
-    'red': 'rgb(250, 0, 0)',
+    'red': 'rgb(255, 0, 0)',
+    'mona_lisa': 'rgb(255, 143, 143)',
+    'red_accent': 'rgb(255, 82, 82)',
     'white': 'rgb(255, 255, 255)',
     'green': 'rgb(0, 250, 0)',
     'yellow': 'rgb(255, 255, 10)',

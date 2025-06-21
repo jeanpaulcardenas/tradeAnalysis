@@ -1,6 +1,8 @@
-from dash import dash, dcc, html, callback
+from dash import dash, dcc, html, callback, dash_table
 from dash.dependencies import Input, Output
 from data_classes.statistics_m import Metrics, metrics_between_dates
+from dash_graph_f.tables_functions import TradesDataTable
+from data_classes.factory import metrics_from_file
 from dash_graph_f.graph_high_low import CouldWinTrades, WonVsBestDiff, MetricsRadar
 from dash_graph_f.income import ScatterGraph, BarGraph, SunBurst, TimeOpenIncome
 from config import _INCOME_DROPDOWN_OPTIONS, _BARS_DROPDOWN_OPTIONS, _METRICS_DROPDOWN_OPTIONS, \
@@ -15,7 +17,6 @@ with open('./data/cached_random_dict.pkl', 'rb') as f:
 random_metric = Metrics(pd.DataFrame(rand_data), pd.DataFrame(), 'USD')
 rand_df = random_metric.df
 app = dash.Dash()
-
 logger = get_logger(__name__)
 
 
@@ -91,7 +92,13 @@ def app_layout(start_date, end_date) -> dash.html.Div:
         ),
         dcc.Graph(id='kpi radar'),
         html.Br(),
+        print(type(TradesDataTable(random_metric))),
+        TradesDataTable(random_metric).get_dash_table_component('main'),
+        html.Br(),
+        html.Br(),
+        html.Br(),
         html.Br()
+
     ])
 
     return layout
@@ -142,7 +149,7 @@ def update_charts(measure, start_date, end_date, subplots_choice, bars_choice, t
                                title='Trades you could have won').get_figure()
     real_vs_max = WonVsBestDiff(metrics_obj,
                                 subplots_choice,
-                                title='Real Profit vs Max Possible Profit').get_figure()
+                                title='Profit (won trades) vs Best Possible Result').get_figure()
 
     radar = MetricsRadar(metrics_obj, radar_choice, title='KPI Radar').get_figure()
 
