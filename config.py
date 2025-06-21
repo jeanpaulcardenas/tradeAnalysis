@@ -98,10 +98,11 @@ _PAIRS = {
 }
 
 
-# Plotly constants graphs
+# Plotly graphs constants
 _PLOTLY_GRAPH_TEMPLATE = 'plotly_dark'
 _PLOTLY_GRAPH_COLORS = pxc.qualitative.Light24[1:]
 _PLOTLY_GRAPH_COLORS.insert(1, pxc.qualitative.Light24[0])
+_PLOTLY_GRAPH_COLORS += 10*_PLOTLY_GRAPH_COLORS
 
 # Plotly options (dash app layout dcc segments)
 _TIME_TYPE_OPTIONS = [
