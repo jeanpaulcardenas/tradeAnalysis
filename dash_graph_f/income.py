@@ -120,10 +120,10 @@ class ScatterGraph:
 
     @property
     def hover_template(self) -> str:
-        return '<b>Cumulative profit:</b> %{y}<br>' \
+        return f'<b>Cumulative {self.measure}:</b> %{{y}}<br>' \
                '<b>Order:</b> %{customdata[0]}<br>' \
                '<b>Close date:</b> %{x}<br>' \
-               f'<b>Profit:</b> %{{customdata[1]}} {self.currency_symbol}'
+               f'<b>{self.measure}:</b> %{{customdata[1]:,d}} {self.currency_symbol}'
 
     @property
     def metrics_obj(self) -> Metrics:
