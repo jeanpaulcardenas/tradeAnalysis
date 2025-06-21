@@ -4,7 +4,6 @@ import plotly.graph_objects as go
 import pandas as pd
 
 logger = get_logger(__name__)
-
 _PLOTLY_GRAPH_TEMPLATE = 'plotly_dark'
 
 
@@ -36,7 +35,6 @@ def normalize_data(data: pd.Series) -> list[float]:
     else:
         # if denominator == 0 then return list of zeros
         return [0 for _ in data]
-
 
 
 class BoxGraph:
@@ -135,7 +133,7 @@ class WonVsBestDiff(BoxGraph):
     def __init__(self, metrics: Metrics, subplots_choice: str, title: str):
         super(WonVsBestDiff, self).__init__(metrics, subplots_choice, title)
 
-    def get_figure(self, box_points: str = 'all', custom_data_1: str = 'profit', ) -> go.Figure:
+    def get_figure(self, box_points: str = 'all') -> go.Figure:
         """Returns box figure for 'max_possible_gain' for losing trades (profit < 0). box_points determines
         the way individual values are shown in the graph, this must be one of
         '['all', 'outliers', 'suspectedoutliers', False]'"""
@@ -197,9 +195,7 @@ class MetricsRadar(BoxGraph):
             r += [r[0]]  # we append the first r value to close the line graph of the radar, it's a style choice
             r_real = real_vals.to_list()
             r_real += [r_real[0]],
-            print(name)
             theta = MetricsRadar._THETA
-            print(r, r_real, theta)
             self.fig.add_trace(go.Scatterpolar(
                 theta=theta + [theta[0]],
                 r=r,
@@ -252,5 +248,3 @@ class MetricsRadar(BoxGraph):
                 )
             )
         )
-
-
